@@ -289,7 +289,12 @@ const FIELDS = ['id','nom','prenom','classe','sexe','groupe',
   ...PN_CRITERIA.map(c=>c.key), 'pn_ceinture','pn_prof','pn_date','pn_valide'];
 
 /* ------------------------------------------------------------ STATE --- */
-let APPS_SCRIPT_URL = localStorage.getItem('nsn_apps_script_url') || '';
+// URL de déploiement par défaut : permet à chaque collègue d'être connecté
+// automatiquement à l'ouverture, sans passer par ⚙️ Config. Modifiable via
+// ⚙️ Config si vous migrez un jour vers un nouveau déploiement (la valeur
+// collée y prime alors sur celle-ci, car stockée dans le navigateur).
+const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzotQG2_sbZoiRWTZvKeZUTi-5331c2dQytUxiscYLlxaEojmF0ouCkzAZR1IFqfdNF/exec';
+let APPS_SCRIPT_URL = localStorage.getItem('nsn_apps_script_url') || DEFAULT_APPS_SCRIPT_URL;
 let STUDENTS = [];
 let currentTab = 'general';
 let currentEditId = null;
