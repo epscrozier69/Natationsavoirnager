@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPS Natation : Savoir Nager 2026-2027</title>
+<style>
+  :root{
+    --c1:#2563eb; --c2:#7c3aed; --c3:#db2777; --c4:#ea580c; --c5:#dc2626;
+    --c6:#0891b2; --c7:#4f46e5; --c8:#b45309; --c9:#e11d48; --c10:#0ea5e9;
+    --bg:#f1f5f9; --panel:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+    --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+    --radius:14px;
+    --shadow:0 4px 16px rgba(15,23,42,.08);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  header{
+    background:linear-gradient(120deg,var(--c1),var(--c2) 60%,var(--c3));
+    color:#fff;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    box-shadow:var(--shadow);position:sticky;top:0;z-index:50;
+  }
+  header h1{margin:0;font-size:1.35rem;font-weight:700;}
+  header .sub{font-size:.8rem;opacity:.9;}
+  .sync-box{display:flex;align-items:center;gap:10px;font-size:.8rem;}
+  .sync-dot{width:9px;height:9px;border-radius:50%;background:#94a3b8;}
+  .sync-dot.ok{background:#4ade80;}
+  .sync-dot.bad{background:#f87171;}
+  .sync-dot.loading{background:#facc15;animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+  .icon-btn{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:.85rem;}
+  .icon-btn:hover{background:rgba(255,255,255,.3);}
+
+  nav.tabs{
+    display:flex;gap:6px;padding:10px 20px;background:#e9edf5;flex-wrap:wrap;position:sticky;top:64px;z-index:40;
+    box-shadow:inset 0 -1px 0 var(--line);
+  }
+  nav.tabs button{
+    border:none;background:#fff;color:var(--muted);padding:9px 18px;border-radius:999px;cursor:pointer;
+    font-weight:600;font-size:.88rem;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:.15s;
+  }
+  nav.tabs button:hover{color:var(--ink);}
+  nav.tabs button.active{background:var(--c1);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,.35);}
+
+  main{padding:20px;max-width:1500px;margin:0 auto;}
+  .panel{display:none;}
+  .panel.active{display:block;animation:fadeIn .2s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:18px;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  .toolbar .left{display:flex;gap:8px;flex-wrap:wrap;}
+  .btn{
+    border:none;border-radius:9px;padding:10px 16px;font-weight:600;font-size:.85rem;cursor:pointer;color:#fff;
+    background:var(--c1);box-shadow:0 2px 6px rgba(37,99,235,.3);transition:.15s;
+  }
+  .btn:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  .btn.secondary{background:var(--c6);}
+  .btn.danger{background:var(--c5);}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none;}
+  .btn.small{padding:5px 10px;font-size:.75rem;}
+
+  .chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .chip{
+    border-radius:12px;padding:10px 14px;color:#fff;font-size:.8rem;min-width:120px;box-shadow:var(--shadow);
+  }
+  .chip b{display:block;font-size:1.3rem;}
+
+  .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line);}
+  table{border-collapse:collapse;width:100%;min-width:640px;font-size:.85rem;}
+  thead th{color:#fff;padding:10px 12px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600;}
+  thead th .arrow{font-size:.7rem;opacity:.85;margin-left:4px;}
+  thead tr.filters th{background:#f8fafc;padding:6px 8px;cursor:default;}
+  thead tr.filters input, thead tr.filters select{
+    width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:.78rem;color:var(--ink);background:#fff;
+  }
+  tbody td{padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody tr:hover{background:#f8fafc;}
+  tbody tr.clickable{cursor:pointer;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.75rem;font-weight:700;color:#fff;}
+  .badge.TB{background:var(--ok);}
+  .badge.S{background:var(--c1);}
+  .badge.nonreussi{background:var(--bad);}
+  .badge.Oui{background:var(--ok);}
+  .badge.Non{background:var(--bad);}
+  .badge.empty{background:#cbd5e1;color:#475569;}
+  .badge.grpFort{background:var(--ok);}
+  .badge.grpMoyen{background:var(--warn);}
+  .badge.grpNonNageur{background:var(--bad);}
+
+  .empty-state{padding:40px;text-align:center;color:var(--muted);}
+
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
+  .stat-card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;}
+  .stat-card h3{margin:0 0 12px;font-size:1.05rem;}
+  .stat-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;}
+  .stat-tile{border-radius:10px;padding:10px;color:#fff;text-align:center;}
+  .stat-tile b{display:block;font-size:1.4rem;}
+  .stat-tile span{font-size:.68rem;opacity:.9;}
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;
+    padding:14px;z-index:100;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    background:#fff;border-radius:16px;max-width:760px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);
+    overflow:hidden;display:flex;flex-direction:column;max-height:92vh;
+  }
+  .modal-header{background:linear-gradient(120deg,var(--c1),var(--c7));color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center;flex:0 0 auto;}
+  .modal-header h2{margin:0;font-size:1.05rem;}
+  .modal-header .close{background:transparent;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1;}
+  .modal-body{padding:10px 18px 14px;overflow-y:auto;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;font-size:.9rem;}
+  .test-type-toggle{display:flex;gap:6px;margin-bottom:8px;position:sticky;top:-10px;background:#fff;padding-top:10px;z-index:5;}
+  .tt-btn{
+    flex:1;padding:8px;border-radius:9px;border:2px solid var(--line);background:#f8fafc;
+    font-weight:700;font-size:.82rem;cursor:pointer;color:var(--muted);transition:.15s;
+  }
+  .tt-btn:hover{border-color:var(--c1);}
+  .tt-btn.active{background:var(--c1);color:#fff;border-color:var(--c1);box-shadow:0 3px 10px rgba(37,99,235,.3);}
+  .test-section{display:none;}
+  .test-section.active{display:block;}
+  .section-title{font-size:.92rem;font-weight:700;margin:0 0 2px;display:flex;align-items:center;gap:6px;}
+  .note{background:#fef3c7;color:#92400e;border-radius:7px;padding:5px 10px;font-size:.72rem;margin:4px 0 8px;}
+  .field-row{display:grid;grid-template-columns:1.4fr 1fr;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;}
+  .field-row label{font-weight:600;font-size:.8rem;}
+  .field-row .desc{font-weight:400;color:var(--muted);font-size:.68rem;display:block;margin-top:2px;}
+  .field-row select, .field-row input{
+    padding:6px;border:1px solid var(--line);border-radius:7px;font-size:.8rem;width:100%;
+  }
+  .field-row-cb{padding:6px 0;border-bottom:1px solid #f1f5f9;}
+  .field-row-cb > label{font-weight:700;font-size:.8rem;display:block;margin-bottom:5px;}
+  .cb-group{display:flex;gap:6px;flex-wrap:wrap;}
+  .cb-opt{
+    display:flex;flex-direction:column;align-items:center;gap:1px;
+    border:2px solid var(--line);border-radius:9px;padding:5px 7px;cursor:pointer;
+    min-width:74px;text-align:center;background:#f8fafc;transition:.15s;position:relative;
+  }
+  .cb-opt:hover{border-color:var(--c1);}
+  .cb-opt input{position:absolute;top:3px;right:3px;margin:0;width:13px;height:13px;accent-color:var(--c1);}
+  .cb-opt .emoji{font-size:1.2rem;line-height:1;}
+  .cb-opt .code{font-weight:800;font-size:.75rem;color:var(--ink);letter-spacing:.02em;}
+  .cb-opt small{font-weight:400;color:var(--muted);font-size:.58rem;line-height:1.1;max-width:100px;}
+  .cb-opt.checked{box-shadow:0 2px 6px rgba(0,0,0,.08);}
+  .cb-opt[data-val="TB"].checked{background:#dcfce7;border-color:var(--ok);}
+  .cb-opt[data-val="TB"].checked .code{color:#15803d;}
+  .cb-opt[data-val="S"].checked{background:#dbeafe;border-color:var(--c1);}
+  .cb-opt[data-val="S"].checked .code{color:#1d4ed8;}
+  .cb-opt[data-val="F"].checked{background:#ffedd5;border-color:var(--warn);}
+  .cb-opt[data-val="F"].checked .code{color:#c2410c;}
+  .cb-opt[data-val="I"].checked{background:#fee2e2;border-color:var(--bad);}
+  .cb-opt[data-val="I"].checked .code{color:#b91c1c;}
+  .cb-opt[data-val="Oui"].checked{background:#dcfce7;border-color:var(--ok);}
+  .cb-opt[data-val="Oui"].checked .code{color:#15803d;}
+  .cb-opt[data-val="Non"].checked{background:#fee2e2;border-color:var(--bad);}
+  .cb-opt[data-val="Non"].checked .code{color:#b91c1c;}
+  .cb-opt[data-val="Avec ceinture"].checked{background:#dbeafe;border-color:var(--c1);}
+  .cb-opt[data-val="Avec ceinture"].checked .code{color:#1d4ed8;}
+  .cb-opt[data-val="Sans ceinture"].checked{background:#ffedd5;border-color:var(--c4);}
+  .cb-opt[data-val="Sans ceinture"].checked .code{color:#c2410c;}
+  .meta-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
+  .meta-row div{display:flex;flex-direction:column;gap:2px;}
+  .meta-row label{font-size:.72rem;font-weight:600;color:var(--muted);}
+  .niveau-line{display:flex;align-items:center;gap:8px;margin:6px 0 2px;padding:6px 10px;background:#f8fafc;border-radius:7px;font-size:.85rem;}
+  hr.sep{border:none;border-top:2px dashed var(--line);margin:12px 0;}
+  .modal-footer{padding:10px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;flex:0 0 auto;}
+
+  .config-body .field{margin-bottom:12px;}
+  .config-body label{font-size:.82rem;font-weight:600;display:block;margin-bottom:4px;}
+  .config-body input{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font-size:.85rem;}
+  .config-body p{font-size:.78rem;color:var(--muted);line-height:1.4;}
+  .status-msg{font-size:.8rem;padding:8px;border-radius:8px;margin-top:8px;display:none;}
+  .status-msg.show{display:block;}
+  .status-msg.ok{background:#dcfce7;color:#166534;}
+  .status-msg.bad{background:#fee2e2;color:#991b1b;}
+
+  @media (max-width:700px){
+    header{padding:12px 14px;}
+    header h1{font-size:1.05rem;}
+    main{padding:12px;}
+    .field-row{grid-template-columns:1fr;}
+    .meta-row{grid-template-columns:1fr;}
+    nav.tabs{top:58px;padding:8px 10px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>EPS Natation : Savoir Nager pour l'année 2026-2027</h1>
+    <div class="sub">Suivi partagé de la validation du savoir nager et du pass nautique</div>
+  </div>
+  <div class="sync-box">
+    <span class="sync-dot" id="syncDot"></span>
+    <span id="syncLabel">Non configuré</span>
+    <button class="icon-btn" id="btnRefresh" title="Rafraîchir">⟳ Rafraîchir</button>
+    <button class="icon-btn" id="btnConfig" title="Configuration">⚙️ Config</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabsNav"></nav>
+
+<main>
+  <div class="panel" id="panel-general"></div>
+  <div class="panel" id="panel-6eme1"></div>
+  <div class="panel" id="panel-6eme2"></div>
+  <div class="panel" id="panel-6eme3"></div>
+  <div class="panel" id="panel-6eme4"></div>
+  <div class="panel" id="panel-stats"></div>
+</main>
+
+<!-- Modal saisie élève -->
+<div class="overlay" id="studentOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Élève</h2>
+      <button class="close" id="modalClose">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn ghost" id="modalCancel">Annuler</button>
+      <button class="btn" id="modalSave">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal configuration -->
+<div class="overlay" id="configOverlay">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h2>⚙️ Configuration Google Sheet</h2>
+      <button class="close" id="configClose">&times;</button>
+    </div>
+    <div class="modal-body config-body">
+      <p>Collez ici l'URL de votre Google Apps Script déployé en "Web App" (voir le fichier <code>GoogleAppsScript.gs</code> fourni et les instructions de déploiement).</p>
+      <div class="field">
+        <label>URL de l'application web (Apps Script)</label>
+        <input type="text" id="configUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
+      </div>
+      <div id="configStatus" class="status-msg"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn secondary" id="configTest">Tester la connexion</button>
+      <button class="btn" id="configSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+'use strict';
+
+/* ---------------------------------------------------------- CONFIG ---- */
+const CLASSES = ['6ème1','6ème2','6ème3','6ème4'];
+const PROFS = ['Joud','Mekraldi','Crozier'];
+const PALETTE = ['#2563eb','#7c3aed','#db2777','#ea580c','#dc2626','#0891b2','#4f46e5','#b45309','#e11d48','#0ea5e9','#65a30d'.replace('65a30d','2563eb')];
+// (dernier remplacé pour éviter le vert si jamais utilisé au-delà de 10 colonnes)
+
+const SN_CRITERIA = [
+  {key:'sn_entree', label:"Entrée dans l'eau", opt:{TB:"Chute arrière sans paniquer", S:"Chute arrière", F:"Saut avec frite", I:"Descente à l'échelle"}},
+  {key:'sn_deplacement_aller', label:"Déplacement ventral 3m50 (aller)", opt:{TB:"Crawl aligné", S:"Corps oblique", F:"S'arrête", I:"Impossible"}},
+  {key:'sn_immersion_aller', label:"Immersion 1m50 (aller)", opt:{TB:"Plongeon canard", S:"Franchissement sans le toucher", F:"Reprise d'air ou touche l'obstacle", I:"Impossible"}},
+  {key:'sn_nage_ventrale', label:"Nage ventrale sur 20m", opt:{TB:"Crawl aligné", S:"Corps oblique", F:"S'arrête", I:"Impossible"}},
+  {key:'sn_maintien_vertical', label:"Maintien vertical", opt:{TB:"Flottaison calme et maîtrisée 15 sec", S:"Flottaison 15 sec", F:"Flottaison < à 10 sec", I:"Flottaison < 5 sec"}},
+  {key:'sn_demi_tour', label:"Demi-tour", opt:{TB:"Passage ventral/dorsal en restant gainé", S:"Passage ventral/dorsal avec perte de gainage", F:"Passage ventral/dorsal en touchant le mur", I:"En s'aidant du mur"}},
+  {key:'sn_nage_dorsale', label:"Nage dorsale sur 20m", opt:{TB:"Dos crawlé aligné", S:"Dos oblique ou sans bras", F:"S'arrête", I:"Impossible"}},
+  {key:'sn_immersion_retour', label:"Immersion 1m50 (retour)", opt:{TB:"Plongeon canard", S:"Franchissement sans le toucher", F:"Reprise d'air ou touche l'obstacle", I:"Impossible"}},
+  {key:'sn_deplacement_retour', label:"Déplacement ventral 3m50 (retour)", opt:{TB:"Crawl aligné", S:"Corps oblique", F:"S'arrête", I:"Impossible"}},
+];
+
+const PN_CRITERIA = [
+  {key:'pn_entree_saut', label:"Entrée dans l'eau par un saut"},
+  {key:'pn_maintien_vertical', label:"Maintien vertical 5 sec"},
+  {key:'pn_etoile_dorsale', label:"Étoile dorsale 5 sec"},
+  {key:'pn_nage_ventrale', label:"Nage ventrale 20m"},
+  {key:'pn_immersion', label:"Immersion"},
+];
+
+const LEVEL_EMOJI = {
+  TB:'🏊', S:'🟢', F:'🟡', I:'🔴',
+  Oui:'✅', Non:'🚫',
+  'Avec ceinture':'🦺', 'Sans ceinture':'🙅',
+};
+
+const FIELDS = ['id','nom','prenom','classe','sexe','groupe',
+  ...SN_CRITERIA.map(c=>c.key), 'sn_ancrage','sn_prof','sn_date','sn_niveau',
+  ...PN_CRITERIA.map(c=>c.key), 'pn_ceinture','pn_prof','pn_date','pn_valide'];
+
+/* ------------------------------------------------------------ STATE --- */
+let APPS_SCRIPT_URL = localStorage.getItem('nsn_apps_script_url') || '';
+let STUDENTS = [];
+let currentTab = 'general';
+let currentEditId = null;
+const tableState = {}; // { tableId: { sortKey, sortDir, filters:{} } }
+
+/* -------------------------------------------------------------- API --- */
+function setSync(state, label){
+  const dot = document.getElementById('syncDot');
+  dot.className = 'sync-dot ' + state;
+  document.getElementById('syncLabel').textContent = label;
+}
+
+async function apiGetAll(){
+  if(!APPS_SCRIPT_URL) throw new Error('URL non configurée');
+  const res = await fetch(APPS_SCRIPT_URL + '?action=getAll');
+  if(!res.ok) throw new Error('Erreur réseau ' + res.status);
+  const data = await res.json();
+  if(data.error) throw new Error(data.error);
+  return data.students || [];
+}
+
+async function apiPost(payload){
+  if(!APPS_SCRIPT_URL) throw new Error('URL non configurée');
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload)
+  });
+  if(!res.ok) throw new Error('Erreur réseau ' + res.status);
+  const data = await res.json();
+  if(data.error) throw new Error(data.error);
+  return data;
+}
+
+function saveCache(){
+  localStorage.setItem('nsn_students_cache', JSON.stringify(STUDENTS));
+  localStorage.setItem('nsn_last_sync', new Date().toISOString());
+}
+function loadCache(){
+  try{
+    const raw = localStorage.getItem('nsn_students_cache');
+    if(raw) STUDENTS = JSON.parse(raw);
+  }catch(e){ STUDENTS = []; }
+}
+
+async function refreshAll(showLoading=true){
+  if(showLoading) setSync('loading','Synchronisation...');
+  try{
+    STUDENTS = await apiGetAll();
+    saveCache();
+    setSync('ok', 'Synchronisé ' + new Date().toLocaleTimeString());
+    renderAll();
+    return true;
+  }catch(err){
+    setSync('bad', 'Hors ligne (' + err.message + ')');
+    renderAll();
+    return false;
+  }
+}
+
+/* ------------------------------------------------------------ UTILS --- */
+function computeNiveauSN(s){
+  const vals = SN_CRITERIA.map(c=>s[c.key]).filter(v=>v);
+  if(vals.length < SN_CRITERIA.length) return '';
+  if(vals.some(v=>v==='F'||v==='I')) return 'Non réussi';
+  const tb = vals.filter(v=>v==='TB').length;
+  const sc = vals.filter(v=>v==='S').length;
+  return tb > sc ? 'TB' : 'S';
+}
+function computeValidePN(s){
+  const vals = PN_CRITERIA.map(c=>s[c.key]).filter(v=>v);
+  if(vals.length < PN_CRITERIA.length) return '';
+  return vals.every(v=>v==='Oui') ? 'Oui' : 'Non';
+}
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtDate(iso){
+  if(!iso) return '';
+  const parts = String(iso).split('-');
+  if(parts.length===3) return parts[2]+'/'+parts[1]+'/'+parts[0];
+  return iso;
+}
+function isGarcon(s){
+  const v = String(s.sexe||'').trim().toUpperCase();
+  return v==='G' || v==='M';
+}
+function isFille(s){
+  return String(s.sexe||'').trim().toUpperCase()==='F';
+}
+function niveauBadge(v){
+  if(!v) return '<span class="badge empty">— À évaluer</span>';
+  if(v==='Non réussi') return '<span class="badge nonreussi">🔴 Non réussi</span>';
+  return '<span class="badge '+v+'">'+(LEVEL_EMOJI[v]||'')+' '+v+'</span>';
+}
+function ouiNonBadge(v){
+  if(!v) return '<span class="badge empty">— À évaluer</span>';
+  return '<span class="badge '+v+'">'+(LEVEL_EMOJI[v]||'')+' '+v+'</span>';
+}
+function groupeBadge(v){
+  if(!v) return '<span class="badge empty">—</span>';
+  const cls = {'Fort':'grpFort', 'Moyen':'grpMoyen', 'Non nageur':'grpNonNageur'}[v] || 'empty';
+  const emoji = {'Fort':'💪', 'Moyen':'🟡', 'Non nageur':'🔴'}[v] || '';
+  return '<span class="badge '+cls+'">'+emoji+' '+v+'</span>';
+}
+
+/* --------------------------------------------------------- RENDERING -- */
+const TAB_DEFS = [
+  {id:'general', label:'Général'},
+  {id:'6eme1', label:'6ème1'},
+  {id:'6eme2', label:'6ème2'},
+  {id:'6eme3', label:'6ème3'},
+  {id:'6eme4', label:'6ème4'},
+  {id:'stats', label:'Statistiques'},
+];
+
+function initTabs(){
+  const nav = document.getElementById('tabsNav');
+  nav.innerHTML = TAB_DEFS.map(t=>`<button data-tab="${t.id}" class="${t.id===currentTab?'active':''}">${t.label}</button>`).join('');
+  nav.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentTab = btn.dataset.tab;
+      nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===btn));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      document.getElementById('panel-'+currentTab).classList.add('active');
+      renderCurrentTab();
+    });
+  });
+  document.getElementById('panel-'+currentTab).classList.add('active');
+}
+
+function renderAll(){
+  renderGeneral();
+  CLASSES.forEach(c=>renderClassTab(c));
+  renderStats();
+}
+function renderCurrentTab(){
+  if(currentTab==='general') renderGeneral();
+  else if(currentTab==='stats') renderStats();
+  else renderClassTab(currentTab.replace('6eme','6ème'));
+}
+
+/* Generic sortable/filterable table builder */
+function buildTable(tableId, columns, rows, opts={}){
+  if(!tableState[tableId]) tableState[tableId] = {sortKey:'nom', sortDir:1, filters:{}};
+  const st = tableState[tableId];
+
+  let filtered = rows.filter(r=>{
+    return columns.every(col=>{
+      const f = st.filters[col.key];
+      if(!f) return true;
+      const val = String(col.getValue(r) ?? '').toLowerCase();
+      return val.includes(String(f).toLowerCase());
+    });
+  });
+
+  if(st.sortKey){
+    const col = columns.find(c=>c.key===st.sortKey);
+    filtered.sort((a,b)=>{
+      const va = String(col.getValue(a) ?? '');
+      const vb = String(col.getValue(b) ?? '');
+      return va.localeCompare(vb, 'fr') * st.sortDir;
+    });
+  }
+
+  const headerCells = columns.map((col,i)=>{
+    const color = PALETTE[i % PALETTE.length];
+    const arrow = st.sortKey===col.key ? (st.sortDir===1?'▲':'▼') : '';
+    return `<th style="background:${color}" data-key="${col.key}">${col.label}<span class="arrow">${arrow}</span></th>`;
+  }).join('');
+
+  const filterCells = columns.map(col=>{
+    if(col.filterType==='select'){
+      const options = (col.filterOptions||[]).map(o=>`<option value="${o}" ${st.filters[col.key]===o?'selected':''}>${o}</option>`).join('');
+      return `<th><select data-filter-key="${col.key}"><option value="">Tous</option>${options}</select></th>`;
+    }
+    if(col.filterType===false) return `<th></th>`;
+    return `<th><input type="text" data-filter-key="${col.key}" value="${st.filters[col.key]||''}" placeholder="Filtrer..."></th>`;
+  }).join('');
+
+  const bodyRows = filtered.length ? filtered.map(row=>{
+    const cells = columns.map(col=>`<td>${col.render ? col.render(row) : (col.getValue(row) ?? '')}</td>`).join('');
+    return `<tr class="${opts.rowClickable?'clickable':''}" data-id="${row.id}">${cells}</tr>`;
+  }).join('') : `<tr><td colspan="${columns.length}" class="empty-state">Aucun élève ne correspond.</td></tr>`;
+
+  const html = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>${headerCells}</tr>
+          <tr class="filters">${filterCells}</tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
+  return {html, filtered};
+}
+
+function wireTable(container, tableId, columns, opts={}){
+  const st = tableState[tableId];
+  container.querySelectorAll('thead th[data-key]').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.key;
+      if(st.sortKey===key) st.sortDir *= -1; else { st.sortKey = key; st.sortDir = 1; }
+      opts.rerender();
+    });
+  });
+  container.querySelectorAll('[data-filter-key]').forEach(el=>{
+    el.addEventListener(el.tagName==='SELECT' ? 'change':'input', ()=>{
+      st.filters[el.dataset.filterKey] = el.value;
+      opts.rerender();
+    });
+  });
+  if(opts.rowClickable){
+    container.querySelectorAll('tbody tr[data-id]').forEach(tr=>{
+      tr.addEventListener('click', (e)=>{
+        if(e.target.closest('button')) return;
+        openModal(tr.dataset.id);
+      });
+    });
+  }
+  container.querySelectorAll('[data-action="delete"]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      deleteStudentPrompt(btn.dataset.id);
+    });
+  });
+  container.querySelectorAll('[data-action="export"]').forEach(btn=>{
+    btn.addEventListener('click', ()=> exportExcel(opts.exportRows(), opts.exportName));
+  });
+}
+
+/* ---- Général tab ---- */
+function renderGeneral(){
+  const panel = document.getElementById('panel-general');
+  const columns = [
+    {key:'nom', label:'Nom', getValue:r=>r.nom},
+    {key:'prenom', label:'Prénom', getValue:r=>r.prenom},
+    {key:'classe', label:'Classe', getValue:r=>r.classe, filterType:'select', filterOptions:CLASSES},
+    {key:'sexe', label:'Sexe', getValue:r=>r.sexe, filterType:'select', filterOptions:['F','G']},
+    {key:'groupe', label:'Groupe (niveau départ)', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
+    {key:'sn_niveau', label:'Niveau Savoir Nager', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
+    {key:'sn_date', label:'Date SN', getValue:r=>r.sn_date, render:r=>fmtDate(r.sn_date)},
+    {key:'sn_prof', label:'Prof SN', getValue:r=>r.sn_prof, filterType:'select', filterOptions:PROFS},
+    {key:'pn_valide', label:'Pass Nautique', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
+    {key:'pn_date', label:'Date PN', getValue:r=>r.pn_date, render:r=>fmtDate(r.pn_date)},
+    {key:'pn_prof', label:'Prof PN', getValue:r=>r.pn_prof, filterType:'select', filterOptions:PROFS},
+    {key:'actions', label:'Actions', filterType:false, getValue:()=>'', render:r=>`<button class="btn danger small" data-action="delete" data-id="${r.id}">🗑️ Supprimer</button>`},
+  ];
+  const {html, filtered} = buildTable('general', columns, STUDENTS, {rowClickable:false});
+  panel.innerHTML = `
+    <div class="card">
+      <div class="toolbar">
+        <div class="left">
+          <button class="btn secondary" data-action="export" id="genExport">📊 Exporter Excel</button>
+        </div>
+        <button class="btn" id="genImport">➕ Importer les élèves du collège</button>
+      </div>
+      ${html}
+    </div>`;
+  wireTable(panel, 'general', columns, {
+    rerender: renderGeneral,
+    exportRows: ()=>filtered,
+    exportName: 'eleves_general.xlsx'
+  });
+  document.getElementById('genImport').addEventListener('click', importCollegeList);
+}
+
+/* ---- Class tabs ---- */
+function renderClassTab(classe){
+  const domId = '6eme' + classe.replace('6ème','');
+  const panel = document.getElementById('panel-' + domId);
+  const rows = STUDENTS.filter(s=>s.classe===classe);
+
+  const nb = rows.length;
+  const filles = rows.filter(isFille).length;
+  const garcons = rows.filter(isGarcon).length;
+  const validesSN = rows.filter(s=>s.sn_niveau==='TB'||s.sn_niveau==='S').length;
+  const nonNageurs = rows.filter(s=>s.groupe==='Non nageur').length;
+
+  const columns = [
+    {key:'nom', label:'Nom', getValue:r=>r.nom},
+    {key:'prenom', label:'Prénom', getValue:r=>r.prenom},
+    {key:'sexe', label:'Sexe', getValue:r=>r.sexe, filterType:'select', filterOptions:['F','G']},
+    {key:'groupe', label:'Groupe (niveau départ)', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
+    {key:'sn_niveau', label:'Niveau Savoir Nager', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
+    {key:'pn_valide', label:'Pass Nautique', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
+    {key:'derniere_maj', label:'Dernière modif.', getValue:r=>[r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'', render:r=>fmtDate([r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'')},
+    {key:'actions', label:'Actions', filterType:false, getValue:()=>'', render:r=>`<button class="btn small" data-action="open" data-id="${r.id}">✏️ Voir / Modifier</button>`},
+  ];
+
+  const {html, filtered} = buildTable(domId, columns, rows, {rowClickable:true});
+  panel.innerHTML = `
+    <div class="chips">
+      <div class="chip" style="background:var(--c1)"><b>${nb}</b>Élèves</div>
+      <div class="chip" style="background:var(--c3)"><b>${filles}</b>Filles</div>
+      <div class="chip" style="background:var(--c6)"><b>${garcons}</b>Garçons</div>
+      <div class="chip" style="background:var(--c2)"><b>${validesSN}</b>Savoir nager validé</div>
+      <div class="chip" style="background:var(--c5)"><b>${nonNageurs}</b>Groupe non nageur</div>
+    </div>
+    <div class="card">
+      <div class="toolbar">
+        <div class="left"><button class="btn secondary" data-action="export">📊 Exporter Excel</button></div>
+      </div>
+      ${html}
+    </div>`;
+  wireTable(panel, domId, columns, {
+    rerender: ()=>renderClassTab(classe),
+    rowClickable:true,
+    exportRows: ()=>filtered,
+    exportName: 'eleves_' + classe + '.xlsx'
+  });
+  panel.querySelectorAll('[data-action="open"]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{ e.stopPropagation(); openModal(btn.dataset.id); });
+  });
+}
+
+/* ---- Stats tab ---- */
+function renderStats(){
+  const panel = document.getElementById('panel-stats');
+  const cardsHtml = CLASSES.map((classe,i)=>{
+    const rows = STUDENTS.filter(s=>s.classe===classe);
+    const nb = rows.length;
+    const filles = rows.filter(s=>s.sexe==='F').length;
+    const garcons = rows.filter(s=>s.sexe==='G').length;
+    const validesSN = rows.filter(s=>s.sn_niveau==='TB'||s.sn_niveau==='S').length;
+    const nonNageurs = rows.filter(s=>s.groupe==='Non nageur').length;
+    const tiles = [
+      ['Élèves', nb, 'c1'], ['Filles', filles, 'c3'], ['Garçons', garcons, 'c6'],
+      ['Savoir nager validé', validesSN, 'c2'], ['Groupe non nageur', nonNageurs, 'c5'],
+    ];
+    return `
+      <div class="stat-card">
+        <h3>${classe}</h3>
+        <div class="stat-tiles">
+          ${tiles.map(t=>`<div class="stat-tile" style="background:var(--${t[2]})"><b>${t[1]}</b><span>${t[0]}</span></div>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+  panel.innerHTML = `<div class="stats-grid">${cardsHtml}</div>`;
+}
+
+/* --------------------------------------------------------- EXCEL export */
+function exportExcel(rows, filename){
+  const data = rows.map(r=>({
+    Nom:r.nom, Prénom:r.prenom, Classe:r.classe, Sexe:r.sexe, 'Groupe':r.groupe||'',
+    'Niveau Savoir Nager':r.sn_niveau||'', 'Date SN':fmtDate(r.sn_date), 'Prof SN':r.sn_prof||'',
+    'Pass Nautique':r.pn_valide||'', 'Date PN':fmtDate(r.pn_date), 'Prof PN':r.pn_prof||'',
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Export');
+  XLSX.writeFile(wb, filename);
+}
+
+/* ------------------------------------------------------------- MODAL -- */
+function choiceGroup(label, field, current, options){
+  const opts = options.map(([val,text,desc])=>{
+    const isChecked = current === val;
+    const emoji = LEVEL_EMOJI[val] || '❔';
+    return `
+      <label class="cb-opt ${isChecked?'checked':''}" data-val="${val}">
+        <input type="checkbox" data-value="${val}" ${isChecked?'checked':''}>
+        <span class="emoji">${emoji}</span>
+        <span class="code">${text}</span>
+        ${desc?`<small>${desc}</small>`:''}
+      </label>`;
+  }).join('');
+  return `
+    <div class="field-row-cb">
+      <label>${label}</label>
+      <div class="cb-group" data-field="${field}">${opts}</div>
+    </div>`;
+}
+function snFieldGroup(c, current){
+  return choiceGroup(c.label, c.key, current, Object.entries(c.opt).map(([k,desc])=>[k,k,desc]));
+}
+function ouiNonGroup(label, field, current){
+  return choiceGroup(label, field, current, [['Oui','Oui'],['Non','Non']]);
+}
+
+function wireChoiceGroups(onChange){
+  document.querySelectorAll('#modalBody .cb-group').forEach(group=>{
+    const boxes = group.querySelectorAll('input[type=checkbox]');
+    boxes.forEach(input=>{
+      input.addEventListener('change', ()=>{
+        if(input.checked){
+          boxes.forEach(other=>{ if(other!==input) other.checked = false; });
+        }
+        group.querySelectorAll('.cb-opt').forEach(lbl=>{
+          lbl.classList.toggle('checked', lbl.querySelector('input').checked);
+        });
+        onChange();
+      });
+    });
+  });
+}
+
+let modalTestType = 'sn';
+
+function setModalTestType(type){
+  modalTestType = type;
+  document.querySelectorAll('.tt-btn').forEach(b=>b.classList.toggle('active', b.dataset.type===type));
+  document.getElementById('sectionSN').classList.toggle('active', type==='sn');
+  document.getElementById('sectionPN').classList.toggle('active', type==='pn');
+  document.getElementById('modalBody').scrollTop = 0;
+}
+
+function openModal(id){
+  const s = STUDENTS.find(x=>x.id===id);
+  if(!s) return;
+  currentEditId = id;
+  document.getElementById('modalTitle').textContent = `${s.nom} ${s.prenom} — ${s.classe}`;
+
+  const snRows = SN_CRITERIA.map(c=>snFieldGroup(c, s[c.key])).join('');
+  const pnRows = PN_CRITERIA.map(c=>ouiNonGroup(c.label, c.key, s[c.key])).join('');
+
+  const hasSN = SN_CRITERIA.some(c=>s[c.key]) || s.sn_ancrage;
+  const hasPN = PN_CRITERIA.some(c=>s[c.key]) || s.pn_ceinture;
+  const initialType = (!hasSN && hasPN) ? 'pn' : 'sn';
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="test-type-toggle">
+      <button type="button" class="tt-btn" data-type="sn">🏊 Savoir Nager</button>
+      <button type="button" class="tt-btn" data-type="pn">🎽 Pass Nautique</button>
+    </div>
+
+    <div class="test-section" id="sectionSN">
+      <div class="note">⚠️ Rappel : le test se fait sans lunettes.</div>
+      ${snRows}
+      ${ouiNonGroup("S'ancrer", 'sn_ancrage', s.sn_ancrage)}
+      <div class="meta-row">
+        <div>
+          <label>Professeur</label>
+          <select data-field="sn_prof">
+            <option value="">—</option>
+            ${PROFS.map(p=>`<option value="${p}" ${s.sn_prof===p?'selected':''}>${p}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label>Jour du passage</label>
+          <input type="date" data-field="sn_date" value="${s.sn_date||''}">
+        </div>
+      </div>
+      <div class="niveau-line">
+        <strong>Niveau validé :</strong> <span id="niveauSNDisplay">${niveauBadge(computeNiveauSN(s))}</span>
+      </div>
+    </div>
+
+    <div class="test-section" id="sectionPN">
+      ${pnRows}
+      ${choiceGroup('Test réalisé', 'pn_ceinture', s.pn_ceinture, [['Avec ceinture','Avec ceinture'],['Sans ceinture','Sans ceinture']])}
+      <div class="meta-row">
+        <div>
+          <label>Professeur</label>
+          <select data-field="pn_prof">
+            <option value="">—</option>
+            ${PROFS.map(p=>`<option value="${p}" ${s.pn_prof===p?'selected':''}>${p}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label>Jour du passage</label>
+          <input type="date" data-field="pn_date" value="${s.pn_date||''}">
+        </div>
+      </div>
+      <div class="niveau-line">
+        <strong>Pass nautique validé :</strong> <span id="valideePNDisplay">${ouiNonBadge(computeValidePN(s))}</span>
+      </div>
+    </div>
+  `;
+
+  document.querySelectorAll('.tt-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> setModalTestType(btn.dataset.type));
+  });
+  setModalTestType(initialType);
+
+  wireChoiceGroups(()=>{
+    const draft = collectDraft(s);
+    document.getElementById('niveauSNDisplay').innerHTML = niveauBadge(computeNiveauSN(draft));
+    document.getElementById('valideePNDisplay').innerHTML = ouiNonBadge(computeValidePN(draft));
+  });
+  document.querySelectorAll('#modalBody select[data-field], #modalBody input[type=date][data-field]').forEach(el=>{
+    el.addEventListener('change', ()=>{
+      const draft = collectDraft(s);
+      document.getElementById('niveauSNDisplay').innerHTML = niveauBadge(computeNiveauSN(draft));
+      document.getElementById('valideePNDisplay').innerHTML = ouiNonBadge(computeValidePN(draft));
+    });
+  });
+
+  document.getElementById('studentOverlay').classList.add('show');
+}
+
+function collectDraft(base){
+  const draft = {...base};
+  document.querySelectorAll('#modalBody .cb-group[data-field]').forEach(group=>{
+    const checked = group.querySelector('input[type=checkbox]:checked');
+    draft[group.dataset.field] = checked ? checked.dataset.value : '';
+  });
+  document.querySelectorAll('#modalBody select[data-field], #modalBody input[type=date][data-field]').forEach(el=>{
+    draft[el.dataset.field] = el.value;
+  });
+  return draft;
+}
+
+function closeModal(){
+  document.getElementById('studentOverlay').classList.remove('show');
+  currentEditId = null;
+}
+
+async function saveModal(){
+  const s = STUDENTS.find(x=>x.id===currentEditId);
+  if(!s) return;
+  let draft = collectDraft(s);
+  if(SN_CRITERIA.some(c=>draft[c.key]) && !draft.sn_date) draft.sn_date = todayISO();
+  if(PN_CRITERIA.some(c=>draft[c.key]) && !draft.pn_date) draft.pn_date = todayISO();
+  draft.sn_niveau = computeNiveauSN(draft);
+  draft.pn_valide = computeValidePN(draft);
+
+  const btn = document.getElementById('modalSave');
+  btn.disabled = true; btn.textContent = 'Synchronisation...';
+  try{
+    await refreshAll(false); // récupérer les dernières données avant d'écrire
+    const res = await apiPost({action:'saveStudent', data:draft});
+    STUDENTS = res.students;
+    saveCache();
+    setSync('ok','Synchronisé ' + new Date().toLocaleTimeString());
+    renderAll();
+    closeModal();
+  }catch(err){
+    alert("Impossible d'enregistrer : " + err.message);
+    setSync('bad','Erreur de synchro');
+  }finally{
+    btn.disabled = false; btn.textContent = '💾 Enregistrer';
+  }
+}
+
+async function deleteStudentPrompt(id){
+  const s = STUDENTS.find(x=>x.id===id);
+  if(!s) return;
+  if(!confirm(`Supprimer définitivement ${s.nom} ${s.prenom} (${s.classe}) ?`)) return;
+  try{
+    setSync('loading','Suppression...');
+    const res = await apiPost({action:'deleteStudent', id});
+    STUDENTS = res.students;
+    saveCache();
+    setSync('ok','Synchronisé ' + new Date().toLocaleTimeString());
+    renderAll();
+  }catch(err){
+    alert('Erreur lors de la suppression : ' + err.message);
+    setSync('bad','Erreur de synchro');
+  }
+}
+
+async function importCollegeList(){
+  try{
+    setSync('loading','Import en cours...');
+    const res = await apiPost({action:'importFromCollege'});
+    STUDENTS = res.students;
+    saveCache();
+    setSync('ok','Synchronisé ' + new Date().toLocaleTimeString());
+    renderAll();
+    alert(`Import terminé : ${res.added} élève(s) ajouté(s), ${res.updated} déjà inscrit(s) et mis à jour (classe/sexe/non-nageur).`);
+  }catch(err){
+    alert("Erreur lors de l'import : " + err.message);
+    setSync('bad','Erreur de synchro');
+  }
+}
+
+/* ------------------------------------------------------- CONFIG MODAL - */
+function openConfig(){
+  document.getElementById('configUrl').value = APPS_SCRIPT_URL;
+  document.getElementById('configStatus').className = 'status-msg';
+  document.getElementById('configOverlay').classList.add('show');
+}
+function closeConfig(){ document.getElementById('configOverlay').classList.remove('show'); }
+
+async function testConfig(){
+  const url = document.getElementById('configUrl').value.trim();
+  const statusEl = document.getElementById('configStatus');
+  statusEl.className = 'status-msg show';
+  statusEl.textContent = 'Test en cours...';
+  try{
+    const res = await fetch(url + '?action=getAll');
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    statusEl.className = 'status-msg show ok';
+    statusEl.textContent = `Connexion réussie : ${(data.students||[]).length} élève(s) trouvé(s).`;
+  }catch(err){
+    statusEl.className = 'status-msg show bad';
+    statusEl.textContent = 'Échec de connexion : ' + err.message;
+  }
+}
+
+/* -------------------------------------------------------------- INIT -- */
+function wireGlobalEvents(){
+  document.getElementById('btnRefresh').addEventListener('click', ()=>refreshAll());
+  document.getElementById('btnConfig').addEventListener('click', openConfig);
+  document.getElementById('configClose').addEventListener('click', closeConfig);
+  document.getElementById('configTest').addEventListener('click', testConfig);
+  document.getElementById('configSave').addEventListener('click', ()=>{
+    APPS_SCRIPT_URL = document.getElementById('configUrl').value.trim();
+    localStorage.setItem('nsn_apps_script_url', APPS_SCRIPT_URL);
+    closeConfig();
+    refreshAll();
+  });
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  document.getElementById('modalSave').addEventListener('click', saveModal);
+  document.getElementById('studentOverlay').addEventListener('click', (e)=>{
+    if(e.target.id==='studentOverlay') closeModal();
+  });
+  document.getElementById('configOverlay').addEventListener('click', (e)=>{
+    if(e.target.id==='configOverlay') closeConfig();
+  });
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  loadCache();
+  initTabs();
+  wireGlobalEvents();
+  renderAll();
+  if(APPS_SCRIPT_URL){
+    refreshAll();
+  }else{
+    setSync('bad','Non configuré — cliquez sur ⚙️ Config');
+  }
+});
+</script>
+</body>
+</html>
