@@ -780,10 +780,16 @@ function wireChoiceGroups(onChange){
         group.querySelectorAll('.cb-opt').forEach(lbl=>{
           lbl.classList.toggle('checked', lbl.querySelector('input').checked);
         });
-        onChange();
+        onChange(group.dataset.field);
       });
     });
   });
+}
+function clearGroup(fieldName){
+  const group = document.querySelector(`#modalBody .cb-group[data-field="${fieldName}"]`);
+  if(!group) return;
+  group.querySelectorAll('input[type=checkbox]').forEach(input => input.checked = false);
+  group.querySelectorAll('.cb-opt').forEach(lbl => lbl.classList.remove('checked'));
 }
 
 let modalTestType = 'sn';
@@ -868,8 +874,8 @@ function openModal(id){
   });
   setModalTestType(initialType);
 
-  wireChoiceGroups(()=>{
-    autofillDates(s);
+  wireChoiceGroups((changedField)=>{
+    autofillDates(s, changedField);
     const draft = collectDraft(s);
     document.getElementById('niveauSNDisplay').innerHTML = niveauBadge(computeNiveauSN(draft));
     document.getElementById('valideePNDisplay').innerHTML = ouiNonBadge(computeValidePN(draft));
@@ -885,7 +891,7 @@ function openModal(id){
   document.getElementById('studentOverlay').classList.add('show');
 }
 
-function autofillDates(base){
+function autofillDates(base, changedField){
   const draft = collectDraft(base);
   const snDateInput = document.querySelector('#modalBody [data-field="sn_date"]');
   const pnDateInput = document.querySelector('#modalBody [data-field="pn_date"]');
@@ -901,6 +907,13 @@ function autofillDates(base){
     if(hasPNInput && !pnDateInput.value) pnDateInput.value = todayISO();
     else if(!hasPNInput && pnDateInput.value) pnDateInput.value = '';
   }
+  // Si on vient de décocher la dernière épreuve d'une section, on efface aussi le
+  // professeur sélectionné (mais on ne touche pas au prof si c'est lui qu'on vient
+  // de cliquer, pour ne pas annuler la sélection qu'on est en train de faire).
+  const snCriteriaKeys = SN_CRITERIA.map(c=>c.key);
+  const pnCriteriaKeys = PN_CRITERIA.map(c=>c.key);
+  if(!hasSNInput && snCriteriaKeys.includes(changedField)) clearGroup('sn_prof');
+  if(!hasPNInput && pnCriteriaKeys.includes(changedField)) clearGroup('pn_prof');
 }
 
 function collectDraft(base){
