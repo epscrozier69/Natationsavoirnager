@@ -131,9 +131,12 @@
     padding:6px;border:1px solid var(--line);border-radius:7px;font-size:.8rem;width:100%;
   }
   .criteria-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;}
+  .criteria-col{min-width:0;}
   .field-row-cb{padding:4px 0;border-bottom:1px solid #f1f5f9;}
   .field-row-cb > label{font-weight:700;font-size:.78rem;display:block;margin-bottom:3px;}
   .cb-group{display:flex;gap:6px;flex-wrap:wrap;}
+  .cb-group.nowrap{flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px;}
+  .cb-group.nowrap .cb-opt{flex:0 0 auto;}
   .cb-opt{
     display:flex;flex-direction:column;align-items:center;gap:1px;
     border:2px solid var(--line);border-radius:9px;padding:5px 7px;cursor:pointer;
@@ -237,9 +240,16 @@ const SN_CRITERIA = [
   {key:'sn_maintien_vertical', label:"Maintien vertical", opt:{TB:"Flottaison calme et maîtrisée 15 sec", S:"Flottaison 15 sec", F:"Flottaison < à 10 sec", I:"Flottaison < 5 sec"}},
   {key:'sn_demi_tour', label:"Demi-tour", opt:{TB:"Passage ventral/dorsal en restant gainé", S:"Passage ventral/dorsal avec perte de gainage", F:"Passage ventral/dorsal en touchant le mur", I:"En s'aidant du mur"}},
   {key:'sn_nage_dorsale', label:"Nage dorsale sur 20m", opt:{TB:"Dos crawlé aligné", S:"Dos oblique ou sans bras", F:"S'arrête", I:"Impossible"}},
+  {key:'sn_etoile_dorsale', label:"Étoile dorsale", opt:{TB:"15 sec stable", S:"15 sec mais jambes qui descendent", F:"Étoile tenue < 10 sec", I:"Étoile tenue < 5 sec"}},
   {key:'sn_immersion_retour', label:"Immersion 1m50 (retour)", opt:{TB:"Plongeon canard", S:"Franchissement sans le toucher", F:"Reprise d'air ou touche l'obstacle", I:"Impossible"}},
   {key:'sn_deplacement_retour', label:"Déplacement ventral 3m50 (retour)", opt:{TB:"Crawl aligné", S:"Corps oblique", F:"S'arrête", I:"Impossible"}},
 ];
+
+// Ordre d'affichage demandé dans le formulaire (2 colonnes), indépendant de
+// l'ordre de calcul ci-dessus. 'sn_ancrage' est Oui/Non, traité à part dans openModal.
+const SN_COLUMN_1 = ['sn_entree','sn_deplacement_aller','sn_immersion_aller','sn_nage_ventrale','sn_maintien_vertical'];
+const SN_COLUMN_2 = ['sn_demi_tour','sn_nage_dorsale','sn_etoile_dorsale','sn_immersion_retour','sn_deplacement_retour','sn_ancrage'];
+const SN_CRITERIA_BY_KEY = Object.fromEntries(SN_CRITERIA.map(c=>[c.key,c]));
 
 const PN_CRITERIA = [
   {key:'pn_entree_saut', label:"Entrée dans l'eau par un saut"},
@@ -353,6 +363,20 @@ function isGarcon(s){
 }
 function isFille(s){
   return String(s.sexe||'').trim().toUpperCase()==='F';
+}
+function aReussi(s){
+  return s.sn_niveau==='TB' || s.sn_niveau==='S' || s.pn_valide==='Oui';
+}
+function computeStats(rows){
+  return {
+    nb: rows.length,
+    filles: rows.filter(isFille).length,
+    garcons: rows.filter(isGarcon).length,
+    validesSN: rows.filter(s=>s.sn_niveau==='TB'||s.sn_niveau==='S').length,
+    nonNageurs: rows.filter(s=>s.groupe==='Non nageur').length,
+    nonNageursFillesReussi: rows.filter(s=>s.groupe==='Non nageur' && isFille(s) && aReussi(s)).length,
+    nonNageursGarconsReussi: rows.filter(s=>s.groupe==='Non nageur' && isGarcon(s) && aReussi(s)).length,
+  };
 }
 function niveauBadge(v){
   if(!v) return '<span class="badge empty">— À évaluer</span>';
@@ -537,12 +561,7 @@ function renderClassTab(classe){
   const domId = '6eme' + classe.replace('6ème','');
   const panel = document.getElementById('panel-' + domId);
   const rows = STUDENTS.filter(s=>s.classe===classe);
-
-  const nb = rows.length;
-  const filles = rows.filter(isFille).length;
-  const garcons = rows.filter(isGarcon).length;
-  const validesSN = rows.filter(s=>s.sn_niveau==='TB'||s.sn_niveau==='S').length;
-  const nonNageurs = rows.filter(s=>s.groupe==='Non nageur').length;
+  const st = computeStats(rows);
 
   const columns = [
     {key:'nom', label:'Nom', getValue:r=>r.nom},
@@ -558,11 +577,11 @@ function renderClassTab(classe){
   const {html, filtered} = buildTable(domId, columns, rows, {rowClickable:true});
   panel.innerHTML = `
     <div class="chips">
-      <div class="chip" style="background:var(--c1)"><b>${nb}</b>Élèves</div>
-      <div class="chip" style="background:var(--c3)"><b>${filles}</b>Filles</div>
-      <div class="chip" style="background:var(--c6)"><b>${garcons}</b>Garçons</div>
-      <div class="chip" style="background:var(--c2)"><b>${validesSN}</b>Savoir nager validé</div>
-      <div class="chip" style="background:var(--c5)"><b>${nonNageurs}</b>Groupe non nageur</div>
+      <div class="chip" style="background:var(--c1)"><b>${st.nb}</b>Élèves</div>
+      <div class="chip" style="background:var(--c3)"><b>${st.filles}</b>Filles</div>
+      <div class="chip" style="background:var(--c6)"><b>${st.garcons}</b>Garçons</div>
+      <div class="chip" style="background:var(--c2)"><b>${st.validesSN}</b>Savoir nager validé</div>
+      <div class="chip" style="background:var(--c5)"><b>${st.nonNageurs}</b>Groupe non nageur</div>
     </div>
     <div class="card">
       <div class="toolbar">
@@ -582,28 +601,29 @@ function renderClassTab(classe){
 }
 
 /* ---- Stats tab ---- */
+function statCardHtml(title, st){
+  const tiles = [
+    ['Élèves', st.nb, 'c1'], ['Filles', st.filles, 'c3'], ['Garçons', st.garcons, 'c6'],
+    ['Savoir nager validé', st.validesSN, 'c2'], ['Groupe non nageur', st.nonNageurs, 'c5'],
+    ['Non nageuses réussies', st.nonNageursFillesReussi, 'c9'],
+    ['Non nageurs réussis', st.nonNageursGarconsReussi, 'c10'],
+  ];
+  return `
+    <div class="stat-card">
+      <h3>${title}</h3>
+      <div class="stat-tiles">
+        ${tiles.map(t=>`<div class="stat-tile" style="background:var(--${t[2]})"><b>${t[1]}</b><span>${t[0]}</span></div>`).join('')}
+      </div>
+    </div>`;
+}
 function renderStats(){
   const panel = document.getElementById('panel-stats');
-  const cardsHtml = CLASSES.map((classe,i)=>{
+  const generalCard = statCardHtml('Général (toutes classes)', computeStats(STUDENTS));
+  const classCards = CLASSES.map(classe=>{
     const rows = STUDENTS.filter(s=>s.classe===classe);
-    const nb = rows.length;
-    const filles = rows.filter(s=>s.sexe==='F').length;
-    const garcons = rows.filter(s=>s.sexe==='G').length;
-    const validesSN = rows.filter(s=>s.sn_niveau==='TB'||s.sn_niveau==='S').length;
-    const nonNageurs = rows.filter(s=>s.groupe==='Non nageur').length;
-    const tiles = [
-      ['Élèves', nb, 'c1'], ['Filles', filles, 'c3'], ['Garçons', garcons, 'c6'],
-      ['Savoir nager validé', validesSN, 'c2'], ['Groupe non nageur', nonNageurs, 'c5'],
-    ];
-    return `
-      <div class="stat-card">
-        <h3>${classe}</h3>
-        <div class="stat-tiles">
-          ${tiles.map(t=>`<div class="stat-tile" style="background:var(--${t[2]})"><b>${t[1]}</b><span>${t[0]}</span></div>`).join('')}
-        </div>
-      </div>`;
+    return statCardHtml(classe, computeStats(rows));
   }).join('');
-  panel.innerHTML = `<div class="stats-grid">${cardsHtml}</div>`;
+  panel.innerHTML = `<div class="stats-grid">${generalCard}${classCards}</div>`;
 }
 
 /* --------------------------------------------------------- EXCEL export */
@@ -620,7 +640,7 @@ function exportExcel(rows, filename){
 }
 
 /* ------------------------------------------------------------- MODAL -- */
-function choiceGroup(label, field, current, options){
+function choiceGroup(label, field, current, options, extra={}){
   const opts = options.map(([val,text,desc])=>{
     const isChecked = current === val;
     const emoji = LEVEL_EMOJI[val] || '❔';
@@ -635,11 +655,11 @@ function choiceGroup(label, field, current, options){
   return `
     <div class="field-row-cb">
       <label>${label}</label>
-      <div class="cb-group" data-field="${field}">${opts}</div>
+      <div class="cb-group${extra.nowrap?' nowrap':''}" data-field="${field}">${opts}</div>
     </div>`;
 }
 function snFieldGroup(c, current){
-  return choiceGroup(c.label, c.key, current, Object.entries(c.opt).map(([k,desc])=>[k,k,desc]));
+  return choiceGroup(c.label, c.key, current, Object.entries(c.opt).map(([k,desc])=>[k,k,desc]), {nowrap: c.key==='sn_demi_tour'});
 }
 function ouiNonGroup(label, field, current){
   return choiceGroup(label, field, current, [['Oui','Oui'],['Non','Non']]);
@@ -678,7 +698,11 @@ function openModal(id){
   currentEditId = id;
   document.getElementById('modalTitle').textContent = `${s.nom} ${s.prenom} — ${s.classe}`;
 
-  const snRows = SN_CRITERIA.map(c=>snFieldGroup(c, s[c.key])).join('');
+  const snFieldHtml = key => key==='sn_ancrage'
+    ? ouiNonGroup("S'ancrer", 'sn_ancrage', s.sn_ancrage)
+    : snFieldGroup(SN_CRITERIA_BY_KEY[key], s[key]);
+  const snCol1 = SN_COLUMN_1.map(snFieldHtml).join('');
+  const snCol2 = SN_COLUMN_2.map(snFieldHtml).join('');
   const pnRows = PN_CRITERIA.map(c=>ouiNonGroup(c.label, c.key, s[c.key])).join('');
 
   const hasSN = SN_CRITERIA.some(c=>s[c.key]) || s.sn_ancrage;
@@ -694,8 +718,8 @@ function openModal(id){
     <div class="test-section" id="sectionSN">
       <div class="note">⚠️ Rappel : le test se fait sans lunettes.</div>
       <div class="criteria-grid">
-        ${snRows}
-        ${ouiNonGroup("S'ancrer", 'sn_ancrage', s.sn_ancrage)}
+        <div class="criteria-col">${snCol1}</div>
+        <div class="criteria-col">${snCol2}</div>
       </div>
       <div class="meta-row">
         <div>
