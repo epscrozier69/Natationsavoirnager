@@ -76,7 +76,9 @@
     width:100%;padding:3px 4px;border:1px solid var(--line);border-radius:5px;font-size:.7rem;color:var(--ink);background:#fff;
   }
   tbody td{padding:5px 7px;border-bottom:1px solid var(--line);white-space:nowrap;}
-  tbody tr:hover{background:#f8fafc;}
+  tbody tr:nth-child(odd){background:#ffffff;}
+  tbody tr:nth-child(even){background:#eef1f6;}
+  tbody tr:hover{background:#dbeafe;}
   tbody tr.clickable{cursor:pointer;}
   .badge{display:inline-block;padding:2px 6px;border-radius:999px;font-size:.68rem;font-weight:700;color:#fff;white-space:nowrap;}
   .badge.TB{background:var(--ok);}
@@ -88,6 +90,8 @@
   .badge.grpFort{background:var(--ok);}
   .badge.grpMoyen{background:var(--warn);}
   .badge.grpNonNageur{background:var(--bad);}
+  .badge.sexeF{background:var(--c3);}
+  .badge.sexeG{background:var(--c1);}
 
   .empty-state{padding:40px;text-align:center;color:var(--muted);}
 
@@ -285,6 +289,9 @@ let STUDENTS = [];
 let currentTab = 'general';
 let currentEditId = null;
 const tableState = {}; // { tableId: { sortKey, sortDir, filters:{} } }
+// Après un échec réseau, on évite de retenter l'envoi direct pendant ce délai
+// (évite de faire attendre le timeout complet à chaque enregistrement hors-ligne).
+let assumeOfflineUntil = 0;
 
 /* -------------------------------------------------------------- API --- */
 function setSync(state, label){
@@ -293,9 +300,22 @@ function setSync(state, label){
   document.getElementById('syncLabel').textContent = label;
 }
 
+async function fetchWithTimeout(url, options={}, timeoutMs=6000){
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), timeoutMs);
+  try{
+    return await fetch(url, {...options, signal: controller.signal});
+  }catch(err){
+    if(err.name === 'AbortError') throw new Error('Délai dépassé (hors ligne ?)');
+    throw err;
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
 async function apiGetAll(){
   if(!APPS_SCRIPT_URL) throw new Error('URL non configurée');
-  const res = await fetch(APPS_SCRIPT_URL + '?action=getAll');
+  const res = await fetchWithTimeout(APPS_SCRIPT_URL + '?action=getAll');
   if(!res.ok) throw new Error('Erreur réseau ' + res.status);
   const data = await res.json();
   if(data.error) throw new Error(data.error);
@@ -304,7 +324,7 @@ async function apiGetAll(){
 
 async function apiPost(payload){
   if(!APPS_SCRIPT_URL) throw new Error('URL non configurée');
-  const res = await fetch(APPS_SCRIPT_URL, {
+  const res = await fetchWithTimeout(APPS_SCRIPT_URL, {
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify(payload)
@@ -326,16 +346,72 @@ function loadCache(){
   }catch(e){ STUDENTS = []; }
 }
 
+/* ------------------------------------------------------ PENDING QUEUE - */
+// File d'attente locale des résultats saisis hors-ligne, en attente d'envoi
+// au Google Sheet. Clé = id élève -> dernière version saisie non synchronisée.
+function loadPendingQueue(){
+  try{ return JSON.parse(localStorage.getItem('nsn_pending_saves') || '{}'); }
+  catch(e){ return {}; }
+}
+function savePendingQueue(queue){
+  localStorage.setItem('nsn_pending_saves', JSON.stringify(queue));
+}
+function queueSave(draft){
+  const queue = loadPendingQueue();
+  queue[draft.id] = draft;
+  savePendingQueue(queue);
+}
+function pendingCount(){
+  return Object.keys(loadPendingQueue()).length;
+}
+function upsertLocalStudent(draft){
+  const idx = STUDENTS.findIndex(x=>x.id===draft.id);
+  if(idx >= 0) STUDENTS[idx] = draft; else STUDENTS.push(draft);
+}
+
+async function flushPendingQueue(){
+  const queue = loadPendingQueue();
+  const ids = Object.keys(queue);
+  if(!ids.length) return;
+  setSync('loading', `Envoi de ${ids.length} résultat(s) en attente...`);
+  for(const id of ids){
+    try{
+      const res = await apiPost({action:'saveStudent', data: queue[id]});
+      STUDENTS = res.students;
+      delete queue[id];
+      savePendingQueue(queue);
+    }catch(err){
+      saveCache();
+      renderAll();
+      setSync('bad', `Hors ligne — ${Object.keys(queue).length} résultat(s) en attente d'envoi`);
+      return;
+    }
+  }
+  saveCache();
+}
+
+async function syncNow(){
+  await flushPendingQueue();
+  await refreshAll();
+}
+
 async function refreshAll(showLoading=true){
   if(showLoading) setSync('loading','Synchronisation...');
   try{
     STUDENTS = await apiGetAll();
+    assumeOfflineUntil = 0;
+    // Réapplique les éventuelles saisies hors-ligne pas encore envoyées, pour
+    // ne jamais les faire disparaître de l'écran tant qu'elles ne sont pas synchronisées.
+    const queue = loadPendingQueue();
+    Object.values(queue).forEach(draft => upsertLocalStudent(draft));
     saveCache();
-    setSync('ok', 'Synchronisé ' + new Date().toLocaleTimeString());
+    const nbPending = Object.keys(queue).length;
+    setSync(nbPending?'bad':'ok', nbPending ? `Hors ligne — ${nbPending} résultat(s) en attente d'envoi` : 'Synchronisé ' + new Date().toLocaleTimeString());
     renderAll();
     return true;
   }catch(err){
-    setSync('bad', 'Hors ligne (' + err.message + ')');
+    assumeOfflineUntil = Date.now() + 20000;
+    setSync('bad', pendingCount() ? `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi` : 'Hors ligne (' + err.message + ')');
     renderAll();
     return false;
   }
@@ -380,8 +456,11 @@ function computeStats(rows){
     nb: rows.length,
     filles: rows.filter(isFille).length,
     garcons: rows.filter(isGarcon).length,
-    validesSN: rows.filter(s=>s.sn_niveau==='TB'||s.sn_niveau==='S').length,
+    groupeFort: rows.filter(s=>s.groupe==='Fort').length,
+    groupeMoyen: rows.filter(s=>s.groupe==='Moyen').length,
     nonNageurs: rows.filter(s=>s.groupe==='Non nageur').length,
+    validesSN: rows.filter(s=>s.sn_niveau==='TB'||s.sn_niveau==='S').length,
+    validesPN: rows.filter(s=>s.pn_valide==='Oui').length,
     nonNageursFillesReussi: rows.filter(s=>s.groupe==='Non nageur' && isFille(s) && aReussi(s)).length,
     nonNageursGarconsReussi: rows.filter(s=>s.groupe==='Non nageur' && isGarcon(s) && aReussi(s)).length,
   };
@@ -400,6 +479,12 @@ function groupeBadge(v){
   const cls = {'Fort':'grpFort', 'Moyen':'grpMoyen', 'Non nageur':'grpNonNageur'}[v] || 'empty';
   const emoji = {'Fort':'💪', 'Moyen':'🟡', 'Non nageur':'🔴'}[v] || '';
   return '<span class="badge '+cls+'">'+emoji+' '+v+'</span>';
+}
+function sexeBadge(v){
+  const norm = String(v||'').trim().toUpperCase();
+  if(norm==='F') return '<span class="badge sexeF">F</span>';
+  if(norm==='G' || norm==='M') return '<span class="badge sexeG">G</span>';
+  return '<span class="badge empty">—</span>';
 }
 
 /* --------------------------------------------------------- RENDERING -- */
@@ -535,7 +620,7 @@ function renderGeneral(){
     {key:'nom', label:'Nom', getValue:r=>r.nom},
     {key:'prenom', label:'Prénom', getValue:r=>r.prenom},
     {key:'classe', label:'Classe', getValue:r=>r.classe, filterType:'select', filterOptions:CLASSES},
-    {key:'sexe', label:'Sexe', getValue:r=>r.sexe, filterType:'select', filterOptions:['F','G']},
+    {key:'sexe', label:'Sexe', getValue:r=>r.sexe, render:r=>sexeBadge(r.sexe), filterType:'select', filterOptions:['F','G']},
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'sn_date', label:'Date SN', getValue:r=>r.sn_date, render:r=>fmtDate(r.sn_date)},
@@ -574,7 +659,7 @@ function renderClassTab(classe){
   const columns = [
     {key:'nom', label:'Nom', getValue:r=>r.nom},
     {key:'prenom', label:'Prénom', getValue:r=>r.prenom},
-    {key:'sexe', label:'Sexe', getValue:r=>r.sexe, filterType:'select', filterOptions:['F','G']},
+    {key:'sexe', label:'Sexe', getValue:r=>r.sexe, render:r=>sexeBadge(r.sexe), filterType:'select', filterOptions:['F','G']},
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'pn_valide', label:'Pass Naut.', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
@@ -588,8 +673,11 @@ function renderClassTab(classe){
       <div class="chip" style="background:var(--c1)"><b>${st.nb}</b>Élèves</div>
       <div class="chip" style="background:var(--c3)"><b>${st.filles}</b>Filles</div>
       <div class="chip" style="background:var(--c6)"><b>${st.garcons}</b>Garçons</div>
-      <div class="chip" style="background:var(--c2)"><b>${st.validesSN}</b>Savoir nager validé</div>
+      <div class="chip" style="background:var(--c7)"><b>${st.groupeFort}</b>Groupe fort</div>
+      <div class="chip" style="background:var(--c4)"><b>${st.groupeMoyen}</b>Groupe moyen</div>
       <div class="chip" style="background:var(--c5)"><b>${st.nonNageurs}</b>Groupe non nageur</div>
+      <div class="chip" style="background:var(--c2)"><b>${st.validesSN}</b>Savoir nager validé</div>
+      <div class="chip" style="background:var(--c9)"><b>${st.validesPN}</b>Pass nautique validé</div>
     </div>
     <div class="card">
       <div class="toolbar">
@@ -830,18 +918,39 @@ async function saveModal(){
   draft.pn_valide = computeValidePN(draft);
 
   const btn = document.getElementById('modalSave');
-  btn.disabled = true; btn.textContent = 'Synchronisation...';
+  btn.disabled = true; btn.textContent = 'Enregistrement...';
+
+  if(Date.now() < assumeOfflineUntil){
+    // Échec réseau récent : on n'attend pas un nouveau timeout, on passe direct au mode local.
+    upsertLocalStudent(draft);
+    queueSave(draft);
+    saveCache();
+    renderAll();
+    closeModal();
+    setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi (enregistré localement)`);
+    btn.disabled = false; btn.textContent = '💾 Enregistrer';
+    return;
+  }
+
   try{
-    await refreshAll(false); // récupérer les dernières données avant d'écrire
+    await refreshAll(false); // récupérer les dernières données avant d'écrire (échoue silencieusement si hors ligne)
     const res = await apiPost({action:'saveStudent', data:draft});
     STUDENTS = res.students;
     saveCache();
+    assumeOfflineUntil = 0;
     setSync('ok','Synchronisé ' + new Date().toLocaleTimeString());
     renderAll();
     closeModal();
   }catch(err){
-    alert("Impossible d'enregistrer : " + err.message);
-    setSync('bad','Erreur de synchro');
+    // Hors ligne ou erreur réseau : on enregistre quand même localement,
+    // la synchronisation se fera automatiquement au retour de la connexion.
+    assumeOfflineUntil = Date.now() + 20000;
+    upsertLocalStudent(draft);
+    queueSave(draft);
+    saveCache();
+    renderAll();
+    closeModal();
+    setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi (enregistré localement)`);
   }finally{
     btn.disabled = false; btn.textContent = '💾 Enregistrer';
   }
@@ -881,7 +990,8 @@ async function importCollegeList(){
 
 /* -------------------------------------------------------------- INIT -- */
 function wireGlobalEvents(){
-  document.getElementById('btnRefresh').addEventListener('click', ()=>refreshAll());
+  document.getElementById('btnRefresh').addEventListener('click', ()=>syncNow());
+  window.addEventListener('online', ()=>syncNow());
   document.getElementById('modalClose').addEventListener('click', closeModal);
   document.getElementById('modalCancel').addEventListener('click', closeModal);
   document.getElementById('modalSave').addEventListener('click', saveModal);
@@ -895,7 +1005,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initTabs();
   wireGlobalEvents();
   renderAll();
-  refreshAll();
+  if(pendingCount()) setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi`);
+  syncNow();
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
 });
 </script>
 </body>
