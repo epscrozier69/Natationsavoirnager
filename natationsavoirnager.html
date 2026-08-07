@@ -132,21 +132,22 @@
   }
   .criteria-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;}
   .criteria-col{min-width:0;}
-  .field-row-cb{padding:4px 0;border-bottom:1px solid #f1f5f9;}
-  .field-row-cb > label{font-weight:700;font-size:.78rem;display:block;margin-bottom:3px;}
-  .cb-group{display:flex;gap:6px;flex-wrap:wrap;}
+  .field-row-cb{padding:3px 0;border-bottom:1px solid #f1f5f9;}
+  .field-row-cb > label{font-weight:700;font-size:.74rem;display:block;margin-bottom:2px;}
+  .field-row-cb input[type="date"]{padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:.8rem;}
+  .cb-group{display:flex;gap:5px;flex-wrap:wrap;}
   .cb-group.nowrap{flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px;}
   .cb-group.nowrap .cb-opt{flex:0 0 auto;}
   .cb-opt{
-    display:flex;flex-direction:column;align-items:center;gap:1px;
-    border:2px solid var(--line);border-radius:9px;padding:5px 7px;cursor:pointer;
-    min-width:74px;text-align:center;background:#f8fafc;transition:.15s;position:relative;
+    display:flex;flex-direction:column;align-items:center;gap:0;
+    border:2px solid var(--line);border-radius:8px;padding:3px 6px;cursor:pointer;
+    min-width:68px;text-align:center;background:#f8fafc;transition:.15s;position:relative;
   }
   .cb-opt:hover{border-color:var(--c1);}
-  .cb-opt input{position:absolute;top:3px;right:3px;margin:0;width:13px;height:13px;accent-color:var(--c1);}
-  .cb-opt .emoji{font-size:1.2rem;line-height:1;}
-  .cb-opt .code{font-weight:800;font-size:.75rem;color:var(--ink);letter-spacing:.02em;}
-  .cb-opt small{font-weight:400;color:var(--muted);font-size:.58rem;line-height:1.1;max-width:100px;}
+  .cb-opt input{display:none;}
+  .cb-opt .emoji{font-size:1rem;line-height:1.1;}
+  .cb-opt .code{font-weight:800;font-size:.7rem;color:var(--ink);letter-spacing:.02em;}
+  .cb-opt small{font-weight:400;color:var(--muted);font-size:.54rem;line-height:1.05;max-width:96px;}
   .cb-opt.checked{box-shadow:0 2px 6px rgba(0,0,0,.08);}
   .cb-opt[data-val="TB"].checked{background:#dcfce7;border-color:var(--ok);}
   .cb-opt[data-val="TB"].checked .code{color:#15803d;}
@@ -263,6 +264,7 @@ const LEVEL_EMOJI = {
   TB:'🏊', S:'🟢', F:'🟡', I:'🔴',
   Oui:'✅', Non:'🚫',
   'Avec ceinture':'🦺', 'Sans ceinture':'🙅',
+  Joud:'🧑‍🏫', Mekraldi:'🧑‍🏫', Crozier:'🧑‍🏫',
 };
 
 const FIELDS = ['id','nom','prenom','classe','sexe','groupe',
@@ -721,18 +723,10 @@ function openModal(id){
         <div class="criteria-col">${snCol1}</div>
         <div class="criteria-col">${snCol2}</div>
       </div>
-      <div class="meta-row">
-        <div>
-          <label>Professeur</label>
-          <select data-field="sn_prof">
-            <option value="">—</option>
-            ${PROFS.map(p=>`<option value="${p}" ${s.sn_prof===p?'selected':''}>${p}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <label>Jour du passage</label>
-          <input type="date" data-field="sn_date" value="${s.sn_date||''}">
-        </div>
+      ${choiceGroup('Professeur', 'sn_prof', s.sn_prof, PROFS.map(p=>[p,p]))}
+      <div class="field-row-cb">
+        <label>Jour du passage</label>
+        <input type="date" data-field="sn_date" value="${s.sn_date||''}">
       </div>
       <div class="niveau-line">
         <strong>Niveau validé :</strong> <span id="niveauSNDisplay">${niveauBadge(computeNiveauSN(s))}</span>
@@ -744,18 +738,10 @@ function openModal(id){
         ${pnRows}
         ${choiceGroup('Test réalisé', 'pn_ceinture', s.pn_ceinture, [['Avec ceinture','Avec ceinture'],['Sans ceinture','Sans ceinture']])}
       </div>
-      <div class="meta-row">
-        <div>
-          <label>Professeur</label>
-          <select data-field="pn_prof">
-            <option value="">—</option>
-            ${PROFS.map(p=>`<option value="${p}" ${s.pn_prof===p?'selected':''}>${p}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <label>Jour du passage</label>
-          <input type="date" data-field="pn_date" value="${s.pn_date||''}">
-        </div>
+      ${choiceGroup('Professeur', 'pn_prof', s.pn_prof, PROFS.map(p=>[p,p]))}
+      <div class="field-row-cb">
+        <label>Jour du passage</label>
+        <input type="date" data-field="pn_date" value="${s.pn_date||''}">
       </div>
       <div class="niveau-line">
         <strong>Pass nautique validé :</strong> <span id="valideePNDisplay">${ouiNonBadge(computeValidePN(s))}</span>
@@ -769,6 +755,7 @@ function openModal(id){
   setModalTestType(initialType);
 
   wireChoiceGroups(()=>{
+    autofillDates(s);
     const draft = collectDraft(s);
     document.getElementById('niveauSNDisplay').innerHTML = niveauBadge(computeNiveauSN(draft));
     document.getElementById('valideePNDisplay').innerHTML = ouiNonBadge(computeValidePN(draft));
@@ -782,6 +769,16 @@ function openModal(id){
   });
 
   document.getElementById('studentOverlay').classList.add('show');
+}
+
+function autofillDates(base){
+  const draft = collectDraft(base);
+  const snDateInput = document.querySelector('#modalBody [data-field="sn_date"]');
+  const pnDateInput = document.querySelector('#modalBody [data-field="pn_date"]');
+  const hasSNInput = SN_CRITERIA.some(c=>draft[c.key]) || draft.sn_ancrage || draft.sn_prof;
+  const hasPNInput = PN_CRITERIA.some(c=>draft[c.key]) || draft.pn_ceinture || draft.pn_prof;
+  if(snDateInput && !snDateInput.value && hasSNInput) snDateInput.value = todayISO();
+  if(pnDateInput && !pnDateInput.value && hasPNInput) pnDateInput.value = todayISO();
 }
 
 function collectDraft(base){
