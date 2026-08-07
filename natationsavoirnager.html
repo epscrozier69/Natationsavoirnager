@@ -61,11 +61,12 @@
   .btn.small{padding:4px 8px;font-size:.72rem;}
   .btn.icon-only{padding:3px 6px;font-size:.85rem;line-height:1;}
 
-  .chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .chips{display:flex;gap:5px;flex-wrap:nowrap;margin-bottom:14px;}
   .chip{
-    border-radius:12px;padding:10px 14px;color:#fff;font-size:.8rem;min-width:120px;box-shadow:var(--shadow);
+    border-radius:10px;padding:5px 4px;color:#fff;font-size:.6rem;min-width:0;flex:1 1 0;box-shadow:var(--shadow);
+    text-align:center;line-height:1.15;
   }
-  .chip b{display:block;font-size:1.3rem;}
+  .chip b{display:block;font-size:.95rem;}
 
   .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line);}
   table{border-collapse:collapse;width:100%;font-size:.76rem;table-layout:auto;}
@@ -190,6 +191,8 @@
     .meta-row{grid-template-columns:1fr;}
     .criteria-grid{grid-template-columns:1fr;}
     nav.tabs{top:58px;padding:8px 10px;}
+    .chips{flex-wrap:wrap;}
+    .chip{flex:1 1 calc(33% - 5px);min-width:80px;}
   }
 </style>
 </head>
@@ -663,7 +666,7 @@ function renderClassTab(classe){
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'pn_valide', label:'Pass Naut.', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
-    {key:'derniere_maj', label:'Modifié le', getValue:r=>[r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'', render:r=>fmtDate([r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'')},
+    {key:'derniere_maj', label:'Date', getValue:r=>[r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'', render:r=>fmtDate([r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'')},
     {key:'actions', label:'', filterType:false, getValue:()=>'', render:r=>`<button class="btn small icon-only" data-action="open" data-id="${r.id}" title="Voir / Modifier">✏️</button>`},
   ];
 
