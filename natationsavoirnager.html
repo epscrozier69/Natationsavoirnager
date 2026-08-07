@@ -888,8 +888,10 @@ function autofillDates(base){
   const draft = collectDraft(base);
   const snDateInput = document.querySelector('#modalBody [data-field="sn_date"]');
   const pnDateInput = document.querySelector('#modalBody [data-field="pn_date"]');
-  const hasSNInput = SN_CRITERIA.some(c=>draft[c.key]) || draft.sn_ancrage || draft.sn_prof;
-  const hasPNInput = PN_CRITERIA.some(c=>draft[c.key]) || draft.pn_ceinture || draft.pn_prof;
+  // Uniquement basé sur les épreuves notées elles-mêmes (pas professeur/ancrage/ceinture),
+  // pour que la date apparaisse/disparaisse au rythme des cases d'épreuve cochées/décochées.
+  const hasSNInput = SN_CRITERIA.some(c=>draft[c.key]);
+  const hasPNInput = PN_CRITERIA.some(c=>draft[c.key]);
   if(snDateInput){
     if(hasSNInput && !snDateInput.value) snDateInput.value = todayISO();
     else if(!hasSNInput && snDateInput.value) snDateInput.value = '';
