@@ -166,15 +166,6 @@
   hr.sep{border:none;border-top:2px dashed var(--line);margin:12px 0;}
   .modal-footer{padding:10px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;flex:0 0 auto;}
 
-  .config-body .field{margin-bottom:12px;}
-  .config-body label{font-size:.82rem;font-weight:600;display:block;margin-bottom:4px;}
-  .config-body input{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font-size:.85rem;}
-  .config-body p{font-size:.78rem;color:var(--muted);line-height:1.4;}
-  .status-msg{font-size:.8rem;padding:8px;border-radius:8px;margin-top:8px;display:none;}
-  .status-msg.show{display:block;}
-  .status-msg.ok{background:#dcfce7;color:#166534;}
-  .status-msg.bad{background:#fee2e2;color:#991b1b;}
-
   @media (max-width:700px){
     header{padding:12px 14px;}
     header h1{font-size:1.05rem;}
@@ -196,7 +187,6 @@
     <span class="sync-dot" id="syncDot"></span>
     <span id="syncLabel">Non configuré</span>
     <button class="icon-btn" id="btnRefresh" title="Rafraîchir">⟳ Rafraîchir</button>
-    <button class="icon-btn" id="btnConfig" title="Configuration">⚙️ Config</button>
   </div>
 </header>
 
@@ -222,28 +212,6 @@
     <div class="modal-footer">
       <button class="btn ghost" id="modalCancel">Annuler</button>
       <button class="btn" id="modalSave">💾 Enregistrer</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal configuration -->
-<div class="overlay" id="configOverlay">
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-header">
-      <h2>⚙️ Configuration Google Sheet</h2>
-      <button class="close" id="configClose">&times;</button>
-    </div>
-    <div class="modal-body config-body">
-      <p>Collez ici l'URL de votre Google Apps Script déployé en "Web App" (voir le fichier <code>GoogleAppsScript.gs</code> fourni et les instructions de déploiement).</p>
-      <div class="field">
-        <label>URL de l'application web (Apps Script)</label>
-        <input type="text" id="configUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
-      </div>
-      <div id="configStatus" class="status-msg"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn secondary" id="configTest">Tester la connexion</button>
-      <button class="btn" id="configSave">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -289,12 +257,9 @@ const FIELDS = ['id','nom','prenom','classe','sexe','groupe',
   ...PN_CRITERIA.map(c=>c.key), 'pn_ceinture','pn_prof','pn_date','pn_valide'];
 
 /* ------------------------------------------------------------ STATE --- */
-// URL de déploiement par défaut : permet à chaque collègue d'être connecté
-// automatiquement à l'ouverture, sans passer par ⚙️ Config. Modifiable via
-// ⚙️ Config si vous migrez un jour vers un nouveau déploiement (la valeur
-// collée y prime alors sur celle-ci, car stockée dans le navigateur).
-const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzotQG2_sbZoiRWTZvKeZUTi-5331c2dQytUxiscYLlxaEojmF0ouCkzAZR1IFqfdNF/exec';
-let APPS_SCRIPT_URL = localStorage.getItem('nsn_apps_script_url') || DEFAULT_APPS_SCRIPT_URL;
+// URL du déploiement Apps Script. En cas de migration vers un nouveau
+// déploiement, changez cette valeur ici et re-publiez le fichier sur GitHub.
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzotQG2_sbZoiRWTZvKeZUTi-5331c2dQytUxiscYLlxaEojmF0ouCkzAZR1IFqfdNF/exec';
 let STUDENTS = [];
 let currentTab = 'general';
 let currentEditId = null;
@@ -864,51 +829,14 @@ async function importCollegeList(){
   }
 }
 
-/* ------------------------------------------------------- CONFIG MODAL - */
-function openConfig(){
-  document.getElementById('configUrl').value = APPS_SCRIPT_URL;
-  document.getElementById('configStatus').className = 'status-msg';
-  document.getElementById('configOverlay').classList.add('show');
-}
-function closeConfig(){ document.getElementById('configOverlay').classList.remove('show'); }
-
-async function testConfig(){
-  const url = document.getElementById('configUrl').value.trim();
-  const statusEl = document.getElementById('configStatus');
-  statusEl.className = 'status-msg show';
-  statusEl.textContent = 'Test en cours...';
-  try{
-    const res = await fetch(url + '?action=getAll');
-    const data = await res.json();
-    if(data.error) throw new Error(data.error);
-    statusEl.className = 'status-msg show ok';
-    statusEl.textContent = `Connexion réussie : ${(data.students||[]).length} élève(s) trouvé(s).`;
-  }catch(err){
-    statusEl.className = 'status-msg show bad';
-    statusEl.textContent = 'Échec de connexion : ' + err.message;
-  }
-}
-
 /* -------------------------------------------------------------- INIT -- */
 function wireGlobalEvents(){
   document.getElementById('btnRefresh').addEventListener('click', ()=>refreshAll());
-  document.getElementById('btnConfig').addEventListener('click', openConfig);
-  document.getElementById('configClose').addEventListener('click', closeConfig);
-  document.getElementById('configTest').addEventListener('click', testConfig);
-  document.getElementById('configSave').addEventListener('click', ()=>{
-    APPS_SCRIPT_URL = document.getElementById('configUrl').value.trim();
-    localStorage.setItem('nsn_apps_script_url', APPS_SCRIPT_URL);
-    closeConfig();
-    refreshAll();
-  });
   document.getElementById('modalClose').addEventListener('click', closeModal);
   document.getElementById('modalCancel').addEventListener('click', closeModal);
   document.getElementById('modalSave').addEventListener('click', saveModal);
   document.getElementById('studentOverlay').addEventListener('click', (e)=>{
     if(e.target.id==='studentOverlay') closeModal();
-  });
-  document.getElementById('configOverlay').addEventListener('click', (e)=>{
-    if(e.target.id==='configOverlay') closeConfig();
   });
 }
 
@@ -917,11 +845,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initTabs();
   wireGlobalEvents();
   renderAll();
-  if(APPS_SCRIPT_URL){
-    refreshAll();
-  }else{
-    setSync('bad','Non configuré — cliquez sur ⚙️ Config');
-  }
+  refreshAll();
 });
 </script>
 </body>
