@@ -42,12 +42,12 @@
   nav.tabs button:hover{color:var(--ink);}
   nav.tabs button.active{background:var(--c1);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,.35);}
 
-  main{padding:20px;max-width:1500px;margin:0 auto;}
+  main{padding:14px;max-width:1500px;margin:0 auto;}
   .panel{display:none;}
   .panel.active{display:block;animation:fadeIn .2s ease;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
 
-  .card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:18px;}
+  .card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;margin-bottom:14px;}
   .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
   .toolbar .left{display:flex;gap:8px;flex-wrap:wrap;}
   .btn{
@@ -58,7 +58,8 @@
   .btn.secondary{background:var(--c6);}
   .btn.danger{background:var(--c5);}
   .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none;}
-  .btn.small{padding:5px 10px;font-size:.75rem;}
+  .btn.small{padding:4px 8px;font-size:.72rem;}
+  .btn.icon-only{padding:3px 6px;font-size:.85rem;line-height:1;}
 
   .chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
   .chip{
@@ -67,17 +68,17 @@
   .chip b{display:block;font-size:1.3rem;}
 
   .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line);}
-  table{border-collapse:collapse;width:100%;min-width:640px;font-size:.85rem;}
-  thead th{color:#fff;padding:10px 12px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600;}
-  thead th .arrow{font-size:.7rem;opacity:.85;margin-left:4px;}
-  thead tr.filters th{background:#f8fafc;padding:6px 8px;cursor:default;}
+  table{border-collapse:collapse;width:100%;font-size:.76rem;table-layout:auto;}
+  thead th{color:#fff;padding:6px 7px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600;}
+  thead th .arrow{font-size:.68rem;opacity:.85;margin-left:3px;}
+  thead tr.filters th{background:#f8fafc;padding:4px 5px;cursor:default;}
   thead tr.filters input, thead tr.filters select{
-    width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:.78rem;color:var(--ink);background:#fff;
+    width:100%;padding:3px 4px;border:1px solid var(--line);border-radius:5px;font-size:.7rem;color:var(--ink);background:#fff;
   }
-  tbody td{padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  tbody td{padding:5px 7px;border-bottom:1px solid var(--line);white-space:nowrap;}
   tbody tr:hover{background:#f8fafc;}
   tbody tr.clickable{cursor:pointer;}
-  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.75rem;font-weight:700;color:#fff;}
+  .badge{display:inline-block;padding:2px 6px;border-radius:999px;font-size:.68rem;font-weight:700;color:#fff;white-space:nowrap;}
   .badge.TB{background:var(--ok);}
   .badge.S{background:var(--c1);}
   .badge.nonreussi{background:var(--bad);}
@@ -105,7 +106,7 @@
   }
   .overlay.show{display:flex;}
   .modal{
-    background:#fff;border-radius:16px;max-width:760px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);
+    background:#fff;border-radius:16px;max-width:960px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);
     overflow:hidden;display:flex;flex-direction:column;max-height:92vh;
   }
   .modal-header{background:linear-gradient(120deg,var(--c1),var(--c7));color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center;flex:0 0 auto;}
@@ -129,8 +130,9 @@
   .field-row select, .field-row input{
     padding:6px;border:1px solid var(--line);border-radius:7px;font-size:.8rem;width:100%;
   }
-  .field-row-cb{padding:6px 0;border-bottom:1px solid #f1f5f9;}
-  .field-row-cb > label{font-weight:700;font-size:.8rem;display:block;margin-bottom:5px;}
+  .criteria-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;}
+  .field-row-cb{padding:4px 0;border-bottom:1px solid #f1f5f9;}
+  .field-row-cb > label{font-weight:700;font-size:.78rem;display:block;margin-bottom:3px;}
   .cb-group{display:flex;gap:6px;flex-wrap:wrap;}
   .cb-opt{
     display:flex;flex-direction:column;align-items:center;gap:1px;
@@ -172,6 +174,7 @@
     main{padding:12px;}
     .field-row{grid-template-columns:1fr;}
     .meta-row{grid-template-columns:1fr;}
+    .criteria-grid{grid-template-columns:1fr;}
     nav.tabs{top:58px;padding:8px 10px;}
   }
 </style>
@@ -501,14 +504,14 @@ function renderGeneral(){
     {key:'prenom', label:'Prénom', getValue:r=>r.prenom},
     {key:'classe', label:'Classe', getValue:r=>r.classe, filterType:'select', filterOptions:CLASSES},
     {key:'sexe', label:'Sexe', getValue:r=>r.sexe, filterType:'select', filterOptions:['F','G']},
-    {key:'groupe', label:'Groupe (niveau départ)', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
-    {key:'sn_niveau', label:'Niveau Savoir Nager', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
+    {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
+    {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'sn_date', label:'Date SN', getValue:r=>r.sn_date, render:r=>fmtDate(r.sn_date)},
     {key:'sn_prof', label:'Prof SN', getValue:r=>r.sn_prof, filterType:'select', filterOptions:PROFS},
-    {key:'pn_valide', label:'Pass Nautique', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
+    {key:'pn_valide', label:'Pass Naut.', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
     {key:'pn_date', label:'Date PN', getValue:r=>r.pn_date, render:r=>fmtDate(r.pn_date)},
     {key:'pn_prof', label:'Prof PN', getValue:r=>r.pn_prof, filterType:'select', filterOptions:PROFS},
-    {key:'actions', label:'Actions', filterType:false, getValue:()=>'', render:r=>`<button class="btn danger small" data-action="delete" data-id="${r.id}">🗑️ Supprimer</button>`},
+    {key:'actions', label:'', filterType:false, getValue:()=>'', render:r=>`<button class="btn danger small icon-only" data-action="delete" data-id="${r.id}" title="Supprimer">🗑️</button>`},
   ];
   const {html, filtered} = buildTable('general', columns, STUDENTS, {rowClickable:false});
   panel.innerHTML = `
@@ -545,11 +548,11 @@ function renderClassTab(classe){
     {key:'nom', label:'Nom', getValue:r=>r.nom},
     {key:'prenom', label:'Prénom', getValue:r=>r.prenom},
     {key:'sexe', label:'Sexe', getValue:r=>r.sexe, filterType:'select', filterOptions:['F','G']},
-    {key:'groupe', label:'Groupe (niveau départ)', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
-    {key:'sn_niveau', label:'Niveau Savoir Nager', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
-    {key:'pn_valide', label:'Pass Nautique', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
-    {key:'derniere_maj', label:'Dernière modif.', getValue:r=>[r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'', render:r=>fmtDate([r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'')},
-    {key:'actions', label:'Actions', filterType:false, getValue:()=>'', render:r=>`<button class="btn small" data-action="open" data-id="${r.id}">✏️ Voir / Modifier</button>`},
+    {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
+    {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
+    {key:'pn_valide', label:'Pass Naut.', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
+    {key:'derniere_maj', label:'Modifié le', getValue:r=>[r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'', render:r=>fmtDate([r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'')},
+    {key:'actions', label:'', filterType:false, getValue:()=>'', render:r=>`<button class="btn small icon-only" data-action="open" data-id="${r.id}" title="Voir / Modifier">✏️</button>`},
   ];
 
   const {html, filtered} = buildTable(domId, columns, rows, {rowClickable:true});
@@ -690,8 +693,10 @@ function openModal(id){
 
     <div class="test-section" id="sectionSN">
       <div class="note">⚠️ Rappel : le test se fait sans lunettes.</div>
-      ${snRows}
-      ${ouiNonGroup("S'ancrer", 'sn_ancrage', s.sn_ancrage)}
+      <div class="criteria-grid">
+        ${snRows}
+        ${ouiNonGroup("S'ancrer", 'sn_ancrage', s.sn_ancrage)}
+      </div>
       <div class="meta-row">
         <div>
           <label>Professeur</label>
@@ -711,8 +716,10 @@ function openModal(id){
     </div>
 
     <div class="test-section" id="sectionPN">
-      ${pnRows}
-      ${choiceGroup('Test réalisé', 'pn_ceinture', s.pn_ceinture, [['Avec ceinture','Avec ceinture'],['Sans ceinture','Sans ceinture']])}
+      <div class="criteria-grid">
+        ${pnRows}
+        ${choiceGroup('Test réalisé', 'pn_ceinture', s.pn_ceinture, [['Avec ceinture','Avec ceinture'],['Sans ceinture','Sans ceinture']])}
+      </div>
       <div class="meta-row">
         <div>
           <label>Professeur</label>
