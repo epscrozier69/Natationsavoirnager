@@ -134,7 +134,7 @@
   .criteria-col{min-width:0;}
   .field-row-cb{padding:3px 0;border-bottom:1px solid #f1f5f9;}
   .field-row-cb > label{font-weight:700;font-size:.74rem;display:block;margin-bottom:2px;}
-  .field-row-cb input[type="date"]{padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:.8rem;}
+  .inline-row input[type="date"]{padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:.8rem;}
   .cb-group{display:flex;gap:5px;flex-wrap:wrap;}
   .cb-group.nowrap{flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px;}
   .cb-group.nowrap .cb-opt{flex:0 0 auto;}
@@ -143,12 +143,19 @@
     border:2px solid var(--line);border-radius:8px;padding:3px 6px;cursor:pointer;
     min-width:68px;text-align:center;background:#f8fafc;transition:.15s;position:relative;
   }
+  .cb-group.wide .cb-opt{min-width:96px;padding:7px 12px;}
+  .cb-group.wide .code{font-size:.78rem;}
   .cb-opt:hover{border-color:var(--c1);}
   .cb-opt input{display:none;}
   .cb-opt .emoji{font-size:1rem;line-height:1.1;}
   .cb-opt .code{font-weight:800;font-size:.7rem;color:var(--ink);letter-spacing:.02em;}
   .cb-opt small{font-weight:400;color:var(--muted);font-size:.54rem;line-height:1.05;max-width:96px;}
   .cb-opt.checked{box-shadow:0 2px 6px rgba(0,0,0,.08);}
+  .inline-row{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:4px 0 5px;border-bottom:1px solid #f1f5f9;}
+  .inline-row .inline-item{display:flex;flex-direction:column;gap:3px;}
+  .inline-row .inline-item > label{font-weight:700;font-size:.74rem;}
+  .inline-row .niveau-item{margin-left:auto;}
+  .inline-row .niveau-item span{font-size:.85rem;}
   .cb-opt[data-val="TB"].checked{background:#dcfce7;border-color:var(--ok);}
   .cb-opt[data-val="TB"].checked .code{color:#15803d;}
   .cb-opt[data-val="S"].checked{background:#dbeafe;border-color:var(--c1);}
@@ -168,7 +175,6 @@
   .meta-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
   .meta-row div{display:flex;flex-direction:column;gap:2px;}
   .meta-row label{font-size:.72rem;font-weight:600;color:var(--muted);}
-  .niveau-line{display:flex;align-items:center;gap:8px;margin:6px 0 2px;padding:6px 10px;background:#f8fafc;border-radius:7px;font-size:.85rem;}
   hr.sep{border:none;border-top:2px dashed var(--line);margin:12px 0;}
   .modal-footer{padding:10px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;flex:0 0 auto;}
 
@@ -239,7 +245,7 @@ const SN_CRITERIA = [
   {key:'sn_immersion_aller', label:"Immersion 1m50 (aller)", opt:{TB:"Plongeon canard", S:"Franchissement sans le toucher", F:"Reprise d'air ou touche l'obstacle", I:"Impossible"}},
   {key:'sn_nage_ventrale', label:"Nage ventrale sur 20m", opt:{TB:"Crawl aligné", S:"Corps oblique", F:"S'arrête", I:"Impossible"}},
   {key:'sn_maintien_vertical', label:"Maintien vertical", opt:{TB:"Flottaison calme et maîtrisée 15 sec", S:"Flottaison 15 sec", F:"Flottaison < à 10 sec", I:"Flottaison < 5 sec"}},
-  {key:'sn_demi_tour', label:"Demi-tour", opt:{TB:"Passage ventral/dorsal en restant gainé", S:"Passage ventral/dorsal avec perte de gainage", F:"Passage ventral/dorsal en touchant le mur", I:"En s'aidant du mur"}},
+  {key:'sn_demi_tour', label:"Demi-tour", opt:{TB:"Passage ventral dorsal gainé", S:"Passage avec perte de gainage", F:"Passage en touchant le mur", I:"En s'aidant du mur"}},
   {key:'sn_nage_dorsale', label:"Nage dorsale sur 20m", opt:{TB:"Dos crawlé aligné", S:"Dos oblique ou sans bras", F:"S'arrête", I:"Impossible"}},
   {key:'sn_etoile_dorsale', label:"Étoile dorsale", opt:{TB:"15 sec stable", S:"15 sec mais jambes qui descendent", F:"Étoile tenue < 10 sec", I:"Étoile tenue < 5 sec"}},
   {key:'sn_immersion_retour', label:"Immersion 1m50 (retour)", opt:{TB:"Plongeon canard", S:"Franchissement sans le toucher", F:"Reprise d'air ou touche l'obstacle", I:"Impossible"}},
@@ -642,7 +648,7 @@ function exportExcel(rows, filename){
 }
 
 /* ------------------------------------------------------------- MODAL -- */
-function choiceGroup(label, field, current, options, extra={}){
+function cbOptionsHtml(field, current, options, extra={}){
   const opts = options.map(([val,text,desc])=>{
     const isChecked = current === val;
     const emoji = LEVEL_EMOJI[val] || '❔';
@@ -654,10 +660,14 @@ function choiceGroup(label, field, current, options, extra={}){
         ${desc?`<small>${desc}</small>`:''}
       </label>`;
   }).join('');
+  const cls = ['cb-group', extra.nowrap?'nowrap':'', extra.wide?'wide':''].filter(Boolean).join(' ');
+  return `<div class="${cls}" data-field="${field}">${opts}</div>`;
+}
+function choiceGroup(label, field, current, options, extra={}){
   return `
     <div class="field-row-cb">
       <label>${label}</label>
-      <div class="cb-group${extra.nowrap?' nowrap':''}" data-field="${field}">${opts}</div>
+      ${cbOptionsHtml(field, current, options, extra)}
     </div>`;
 }
 function snFieldGroup(c, current){
@@ -723,13 +733,19 @@ function openModal(id){
         <div class="criteria-col">${snCol1}</div>
         <div class="criteria-col">${snCol2}</div>
       </div>
-      ${choiceGroup('Professeur', 'sn_prof', s.sn_prof, PROFS.map(p=>[p,p]))}
-      <div class="field-row-cb">
-        <label>Jour du passage</label>
-        <input type="date" data-field="sn_date" value="${s.sn_date||''}">
-      </div>
-      <div class="niveau-line">
-        <strong>Niveau validé :</strong> <span id="niveauSNDisplay">${niveauBadge(computeNiveauSN(s))}</span>
+      <div class="inline-row">
+        <div class="inline-item">
+          <label>Professeur</label>
+          ${cbOptionsHtml('sn_prof', s.sn_prof, PROFS.map(p=>[p,p]), {wide:true})}
+        </div>
+        <div class="inline-item">
+          <label>Jour du passage</label>
+          <input type="date" data-field="sn_date" value="${s.sn_date||''}">
+        </div>
+        <div class="inline-item niveau-item">
+          <label>Niveau validé</label>
+          <span id="niveauSNDisplay">${niveauBadge(computeNiveauSN(s))}</span>
+        </div>
       </div>
     </div>
 
@@ -738,13 +754,19 @@ function openModal(id){
         ${pnRows}
         ${choiceGroup('Test réalisé', 'pn_ceinture', s.pn_ceinture, [['Avec ceinture','Avec ceinture'],['Sans ceinture','Sans ceinture']])}
       </div>
-      ${choiceGroup('Professeur', 'pn_prof', s.pn_prof, PROFS.map(p=>[p,p]))}
-      <div class="field-row-cb">
-        <label>Jour du passage</label>
-        <input type="date" data-field="pn_date" value="${s.pn_date||''}">
-      </div>
-      <div class="niveau-line">
-        <strong>Pass nautique validé :</strong> <span id="valideePNDisplay">${ouiNonBadge(computeValidePN(s))}</span>
+      <div class="inline-row">
+        <div class="inline-item">
+          <label>Professeur</label>
+          ${cbOptionsHtml('pn_prof', s.pn_prof, PROFS.map(p=>[p,p]), {wide:true})}
+        </div>
+        <div class="inline-item">
+          <label>Jour du passage</label>
+          <input type="date" data-field="pn_date" value="${s.pn_date||''}">
+        </div>
+        <div class="inline-item niveau-item">
+          <label>Pass nautique validé</label>
+          <span id="valideePNDisplay">${ouiNonBadge(computeValidePN(s))}</span>
+        </div>
       </div>
     </div>
   `;
