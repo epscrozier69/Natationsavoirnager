@@ -326,13 +326,13 @@ async function apiGetAll(){
   return data.students || [];
 }
 
-async function apiPost(payload){
+async function apiPost(payload, timeoutMs=6000){
   if(!APPS_SCRIPT_URL) throw new Error('URL non configurée');
   const res = await fetchWithTimeout(APPS_SCRIPT_URL, {
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify(payload)
-  });
+  }, timeoutMs);
   if(!res.ok) throw new Error('Erreur réseau ' + res.status);
   const data = await res.json();
   if(data.error) throw new Error(data.error);
@@ -1001,12 +1001,15 @@ async function deleteStudentPrompt(id){
 async function importCollegeList(){
   try{
     setSync('loading','Import en cours...');
-    const res = await apiPost({action:'importFromCollege'});
+    // Traitement potentiellement long côté script (parcours de tous les élèves
+    // + nettoyage des classes hors 6ème) : délai plus généreux qu'un simple enregistrement.
+    const res = await apiPost({action:'importFromCollege'}, 60000);
     STUDENTS = res.students;
     saveCache();
     setSync('ok','Synchronisé ' + new Date().toLocaleTimeString());
     renderAll();
-    alert(`Import terminé : ${res.added} élève(s) ajouté(s), ${res.updated} déjà inscrit(s) et mis à jour (classe/sexe/non-nageur).`);
+    const removedMsg = res.removed ? ` ${res.removed} élève(s) hors 6ème retiré(s).` : '';
+    alert(`Import terminé : ${res.added} élève(s) ajouté(s), ${res.updated} déjà inscrit(s) et mis à jour (classe/sexe/groupe).${removedMsg}`);
   }catch(err){
     alert("Erreur lors de l'import : " + err.message);
     setSync('bad','Erreur de synchro');
