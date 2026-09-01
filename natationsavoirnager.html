@@ -304,7 +304,7 @@ function setSync(state, label){
   document.getElementById('syncLabel').textContent = label;
 }
 
-async function fetchWithTimeout(url, options={}, timeoutMs=6000){
+async function fetchWithTimeout(url, options={}, timeoutMs=15000){
   const controller = new AbortController();
   const timer = setTimeout(()=>controller.abort(), timeoutMs);
   try{
@@ -326,7 +326,7 @@ async function apiGetAll(){
   return data.students || [];
 }
 
-async function apiPost(payload, timeoutMs=6000){
+async function apiPost(payload, timeoutMs=15000){
   if(!APPS_SCRIPT_URL) throw new Error('URL non configurée');
   const res = await fetchWithTimeout(APPS_SCRIPT_URL, {
     method:'POST',
@@ -1008,8 +1008,9 @@ async function importCollegeList(){
     saveCache();
     setSync('ok','Synchronisé ' + new Date().toLocaleTimeString());
     renderAll();
-    const removedMsg = res.removed ? ` ${res.removed} élève(s) hors 6ème retiré(s).` : '';
-    alert(`Import terminé : ${res.added} élève(s) ajouté(s), ${res.updated} déjà inscrit(s) et mis à jour (classe/sexe/groupe).${removedMsg}`);
+    const removedMsg = res.removed ? ` ${res.removed} élève(s) absent(s) de la liste retiré(s).` : '';
+    const mergedMsg = res.merged ? ` ${res.merged} doublon(s) fusionné(s) (élèves ayant changé de classe).` : '';
+    alert(`Import terminé : ${res.added} élève(s) ajouté(s), ${res.updated} déjà inscrit(s) et mis à jour (classe/sexe/groupe).${removedMsg}${mergedMsg}`);
   }catch(err){
     alert("Erreur lors de l'import : " + err.message);
     setSync('bad','Erreur de synchro');
