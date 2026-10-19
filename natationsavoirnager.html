@@ -94,10 +94,7 @@
   .badge.grpNonNageur{background:var(--bad);}
   .badge.sexeF{background:var(--c3);}
   .badge.sexeG{background:var(--c1);}
-  .badge.statutAbsent{background:var(--bad);}
-  .badge.statutDP{background:var(--warn);}
-  .badge.statutDispense{background:var(--warn);}
-  .badge.statutNonIntegre{background:var(--bad);}
+  .badge.statutValeur{background:var(--warn);}
 
   .empty-state{padding:40px;text-align:center;color:var(--muted);}
 
@@ -456,21 +453,26 @@ function isGarcon(s){
 function isFille(s){
   return String(s.sexe||'').trim().toUpperCase()==='F';
 }
-function aReussi(s){
-  return s.sn_niveau==='TB' || s.sn_niveau==='S' || s.pn_valide==='Oui';
-}
 function computeStats(rows){
   return {
     nb: rows.length,
     filles: rows.filter(isFille).length,
     garcons: rows.filter(isGarcon).length,
     groupeFort: rows.filter(s=>s.groupe==='Fort').length,
+    groupeFortFilles: rows.filter(s=>s.groupe==='Fort' && isFille(s)).length,
+    groupeFortGarcons: rows.filter(s=>s.groupe==='Fort' && isGarcon(s)).length,
     groupeMoyen: rows.filter(s=>s.groupe==='Moyen').length,
+    groupeMoyenFilles: rows.filter(s=>s.groupe==='Moyen' && isFille(s)).length,
+    groupeMoyenGarcons: rows.filter(s=>s.groupe==='Moyen' && isGarcon(s)).length,
     nonNageurs: rows.filter(s=>s.groupe==='Non nageur').length,
+    nonNageursFilles: rows.filter(s=>s.groupe==='Non nageur' && isFille(s)).length,
+    nonNageursGarcons: rows.filter(s=>s.groupe==='Non nageur' && isGarcon(s)).length,
     validesSN: rows.filter(s=>s.sn_niveau==='TB'||s.sn_niveau==='S').length,
     validesPN: rows.filter(s=>s.pn_valide==='Oui').length,
-    nonNageursFillesReussi: rows.filter(s=>s.groupe==='Non nageur' && isFille(s) && aReussi(s)).length,
-    nonNageursGarconsReussi: rows.filter(s=>s.groupe==='Non nageur' && isGarcon(s) && aReussi(s)).length,
+    nonNageursFillesValidesSN: rows.filter(s=>s.groupe==='Non nageur' && isFille(s) && (s.sn_niveau==='TB'||s.sn_niveau==='S')).length,
+    nonNageursGarconsValidesSN: rows.filter(s=>s.groupe==='Non nageur' && isGarcon(s) && (s.sn_niveau==='TB'||s.sn_niveau==='S')).length,
+    nonNageursFillesValidesPN: rows.filter(s=>s.groupe==='Non nageur' && isFille(s) && s.pn_valide==='Oui').length,
+    nonNageursGarconsValidesPN: rows.filter(s=>s.groupe==='Non nageur' && isGarcon(s) && s.pn_valide==='Oui').length,
   };
 }
 function niveauBadge(v){
@@ -490,8 +492,7 @@ function groupeBadge(v){
 }
 function statutBadge(v){
   if(!v) return '<span class="badge empty">—</span>';
-  const cls = {'Absent':'statutAbsent', 'DP':'statutDP', 'Dispensé de natation':'statutDispense', 'Non intégré en EPS':'statutNonIntegre'}[v] || 'empty';
-  return '<span class="badge '+cls+'">'+v+'</span>';
+  return '<span class="badge statutValeur">'+v+'</span>';
 }
 function sexeBadge(v){
   const norm = String(v||'').trim().toUpperCase();
@@ -626,6 +627,13 @@ function wireTable(container, tableId, columns, opts={}){
   });
 }
 
+// Valeurs de filtre pour une colonne dont le contenu vient du Google Sheet en
+// texte libre (ex: Statut) : pas de liste fixée dans le code, on propose les
+// valeurs réellement présentes.
+function uniqueValues(rows, key){
+  return [...new Set(rows.map(r=>r[key]).filter(Boolean))].sort();
+}
+
 /* ---- Général tab ---- */
 function renderGeneral(){
   const panel = document.getElementById('panel-general');
@@ -635,7 +643,7 @@ function renderGeneral(){
     {key:'classe', label:'Classe', getValue:r=>r.classe, filterType:'select', filterOptions:CLASSES},
     {key:'sexe', label:'Sexe', getValue:r=>r.sexe, render:r=>sexeBadge(r.sexe), filterType:'select', filterOptions:['F','G']},
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
-    {key:'statut', label:'Statut', getValue:r=>r.statut, render:r=>statutBadge(r.statut), filterType:'select', filterOptions:['Absent','DP','Dispensé de natation','Non intégré en EPS']},
+    {key:'statut', label:'Statut', getValue:r=>r.statut, render:r=>statutBadge(r.statut), filterType:'select', filterOptions:uniqueValues(STUDENTS,'statut')},
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'sn_date', label:'Date SN', getValue:r=>r.sn_date, render:r=>fmtDate(r.sn_date)},
     {key:'sn_prof', label:'Prof SN', getValue:r=>r.sn_prof, filterType:'select', filterOptions:PROFS},
@@ -675,7 +683,7 @@ function renderClassTab(classe){
     {key:'prenom', label:'Prénom', getValue:r=>r.prenom},
     {key:'sexe', label:'Sexe', getValue:r=>r.sexe, render:r=>sexeBadge(r.sexe), filterType:'select', filterOptions:['F','G']},
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
-    {key:'statut', label:'Statut', getValue:r=>r.statut, render:r=>statutBadge(r.statut), filterType:'select', filterOptions:['Absent','DP','Dispensé de natation','Non intégré en EPS']},
+    {key:'statut', label:'Statut', getValue:r=>r.statut, render:r=>statutBadge(r.statut), filterType:'select', filterOptions:uniqueValues(rows,'statut')},
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'pn_valide', label:'Pass Naut.', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
     {key:'derniere_maj', label:'Date', getValue:r=>[r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'', render:r=>fmtDate([r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'')},
@@ -715,9 +723,17 @@ function renderClassTab(classe){
 function statCardHtml(title, st){
   const tiles = [
     ['Élèves', st.nb, 'c1'], ['Filles', st.filles, 'c3'], ['Garçons', st.garcons, 'c6'],
-    ['Savoir nager validé', st.validesSN, 'c2'], ['Groupe non nageur', st.nonNageurs, 'c5'],
-    ['Non nageuses réussies', st.nonNageursFillesReussi, 'c9'],
-    ['Non nageurs réussis', st.nonNageursGarconsReussi, 'c10'],
+    ['Savoir nager validé', st.validesSN, 'c2'],
+    ['Groupe fort (départ)', st.groupeFort, 'c7'],
+    ['Dont filles', st.groupeFortFilles, 'c3'], ['Dont garçons', st.groupeFortGarcons, 'c6'],
+    ['Groupe moyen (départ)', st.groupeMoyen, 'c4'],
+    ['Dont filles', st.groupeMoyenFilles, 'c3'], ['Dont garçons', st.groupeMoyenGarcons, 'c6'],
+    ['Groupe non nageur (départ)', st.nonNageurs, 'c5'],
+    ['Dont filles', st.nonNageursFilles, 'c3'], ['Dont garçons', st.nonNageursGarcons, 'c6'],
+    ['Non nageuses — SN validé', st.nonNageursFillesValidesSN, 'c9'],
+    ['Non nageurs — SN validé', st.nonNageursGarconsValidesSN, 'c10'],
+    ['Non nageuses — PN validé', st.nonNageursFillesValidesPN, 'c9'],
+    ['Non nageurs — PN validé', st.nonNageursGarconsValidesPN, 'c10'],
   ];
   return `
     <div class="stat-card">
