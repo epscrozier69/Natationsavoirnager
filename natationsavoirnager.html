@@ -105,6 +105,9 @@
   .stat-tile{border-radius:10px;padding:10px;color:#fff;text-align:center;}
   .stat-tile b{display:block;font-size:1.4rem;}
   .stat-tile span{font-size:.68rem;opacity:.9;}
+  .stat-tile .sub{display:flex;justify-content:center;gap:10px;margin-top:4px;font-size:.68rem;opacity:.95;}
+  .stat-section-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:14px 0 6px;}
+  .stat-section-title:first-of-type{margin-top:4px;}
 
   /* Modal */
   .overlay{
@@ -453,26 +456,36 @@ function isGarcon(s){
 function isFille(s){
   return String(s.sexe||'').trim().toUpperCase()==='F';
 }
+// Décompte total / filles / garçons d'un sous-ensemble de lignes.
+function breakdown(rows){
+  return { total: rows.length, filles: rows.filter(isFille).length, garcons: rows.filter(isGarcon).length };
+}
+// Pour un groupe de départ donné (Fort / Moyen / Non nageur) : effectif du
+// groupe, et parmi ce groupe, qui a validé le savoir nager / le pass nautique.
+function groupeBreakdown(rows, groupe){
+  const g = rows.filter(s=>s.groupe===groupe);
+  return {
+    ...breakdown(g),
+    sn: breakdown(g.filter(s=>s.sn_niveau==='TB'||s.sn_niveau==='S')),
+    pn: breakdown(g.filter(s=>s.pn_valide==='Oui')),
+  };
+}
 function computeStats(rows){
+  const groupes = {
+    Fort: groupeBreakdown(rows, 'Fort'),
+    Moyen: groupeBreakdown(rows, 'Moyen'),
+    'Non nageur': groupeBreakdown(rows, 'Non nageur'),
+  };
   return {
     nb: rows.length,
     filles: rows.filter(isFille).length,
     garcons: rows.filter(isGarcon).length,
-    groupeFort: rows.filter(s=>s.groupe==='Fort').length,
-    groupeFortFilles: rows.filter(s=>s.groupe==='Fort' && isFille(s)).length,
-    groupeFortGarcons: rows.filter(s=>s.groupe==='Fort' && isGarcon(s)).length,
-    groupeMoyen: rows.filter(s=>s.groupe==='Moyen').length,
-    groupeMoyenFilles: rows.filter(s=>s.groupe==='Moyen' && isFille(s)).length,
-    groupeMoyenGarcons: rows.filter(s=>s.groupe==='Moyen' && isGarcon(s)).length,
-    nonNageurs: rows.filter(s=>s.groupe==='Non nageur').length,
-    nonNageursFilles: rows.filter(s=>s.groupe==='Non nageur' && isFille(s)).length,
-    nonNageursGarcons: rows.filter(s=>s.groupe==='Non nageur' && isGarcon(s)).length,
+    groupeFort: groupes.Fort.total,
+    groupeMoyen: groupes.Moyen.total,
+    nonNageurs: groupes['Non nageur'].total,
     validesSN: rows.filter(s=>s.sn_niveau==='TB'||s.sn_niveau==='S').length,
     validesPN: rows.filter(s=>s.pn_valide==='Oui').length,
-    nonNageursFillesValidesSN: rows.filter(s=>s.groupe==='Non nageur' && isFille(s) && (s.sn_niveau==='TB'||s.sn_niveau==='S')).length,
-    nonNageursGarconsValidesSN: rows.filter(s=>s.groupe==='Non nageur' && isGarcon(s) && (s.sn_niveau==='TB'||s.sn_niveau==='S')).length,
-    nonNageursFillesValidesPN: rows.filter(s=>s.groupe==='Non nageur' && isFille(s) && s.pn_valide==='Oui').length,
-    nonNageursGarconsValidesPN: rows.filter(s=>s.groupe==='Non nageur' && isGarcon(s) && s.pn_valide==='Oui').length,
+    groupes,
   };
 }
 function niveauBadge(v){
@@ -720,27 +733,39 @@ function renderClassTab(classe){
 }
 
 /* ---- Stats tab ---- */
+const GROUPE_ORDER = ['Fort','Moyen','Non nageur'];
+// Le Pass Nautique ne concerne que les groupes Moyen et Non nageur (les
+// "débutants"), pas le groupe Fort qui a déjà validé le savoir nager.
+const GROUPE_ORDER_PN = ['Moyen','Non nageur'];
+const GROUPE_LABELS = {Fort:'Groupe fort', Moyen:'Groupe moyen', 'Non nageur':'Groupe non nageur'};
+const GROUPE_COLORS = {Fort:'c7', Moyen:'c4', 'Non nageur':'c5'};
+
+function simpleTile(label, value, color){
+  return `<div class="stat-tile" style="background:var(--${color})"><b>${value}</b><span>${label}</span></div>`;
+}
+// Vignette groupe : effectif total, avec le détail filles/garçons dans la même carte.
+function groupTile(label, b, color){
+  return `<div class="stat-tile" style="background:var(--${color})"><b>${b.total}</b><span>${label}</span><div class="sub"><span>👧 ${b.filles}</span><span>👦 ${b.garcons}</span></div></div>`;
+}
+
 function statCardHtml(title, st){
-  const tiles = [
-    ['Élèves', st.nb, 'c1'], ['Filles', st.filles, 'c3'], ['Garçons', st.garcons, 'c6'],
-    ['Savoir nager validé', st.validesSN, 'c2'],
-    ['Groupe fort (départ)', st.groupeFort, 'c7'],
-    ['Dont filles', st.groupeFortFilles, 'c3'], ['Dont garçons', st.groupeFortGarcons, 'c6'],
-    ['Groupe moyen (départ)', st.groupeMoyen, 'c4'],
-    ['Dont filles', st.groupeMoyenFilles, 'c3'], ['Dont garçons', st.groupeMoyenGarcons, 'c6'],
-    ['Groupe non nageur (départ)', st.nonNageurs, 'c5'],
-    ['Dont filles', st.nonNageursFilles, 'c3'], ['Dont garçons', st.nonNageursGarcons, 'c6'],
-    ['Non nageuses — SN validé', st.nonNageursFillesValidesSN, 'c9'],
-    ['Non nageurs — SN validé', st.nonNageursGarconsValidesSN, 'c10'],
-    ['Non nageuses — PN validé', st.nonNageursFillesValidesPN, 'c9'],
-    ['Non nageurs — PN validé', st.nonNageursGarconsValidesPN, 'c10'],
-  ];
+  const repartitionTiles = GROUPE_ORDER.map(g => groupTile(GROUPE_LABELS[g], st.groupes[g], GROUPE_COLORS[g])).join('');
+  const snTiles = GROUPE_ORDER.map(g => groupTile(GROUPE_LABELS[g], st.groupes[g].sn, 'c2')).join('');
+  const pnTiles = GROUPE_ORDER_PN.map(g => groupTile(GROUPE_LABELS[g], st.groupes[g].pn, 'c9')).join('');
   return `
     <div class="stat-card">
       <h3>${title}</h3>
       <div class="stat-tiles">
-        ${tiles.map(t=>`<div class="stat-tile" style="background:var(--${t[2]})"><b>${t[1]}</b><span>${t[0]}</span></div>`).join('')}
+        ${simpleTile('Élèves', st.nb, 'c1')}
+        ${simpleTile('Garçons', st.garcons, 'c6')}
+        ${simpleTile('Filles', st.filles, 'c3')}
       </div>
+      <div class="stat-section-title">Répartition groupe (départ)</div>
+      <div class="stat-tiles">${repartitionTiles}</div>
+      <div class="stat-section-title">Savoir nager validé</div>
+      <div class="stat-tiles">${snTiles}</div>
+      <div class="stat-section-title">Pass nautique validé</div>
+      <div class="stat-tiles">${pnTiles}</div>
     </div>`;
 }
 function renderStats(){
