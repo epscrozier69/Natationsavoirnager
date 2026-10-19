@@ -106,7 +106,9 @@
   .stat-tile b{display:block;font-size:1.9rem;line-height:1.15;}
   .stat-tile span{font-size:.85rem;opacity:.95;line-height:1.2;}
   .stat-tile .sub{display:flex;justify-content:center;gap:8px;margin-top:8px;}
-  .stat-tile .sub span{background:rgba(0,0,0,.32);padding:3px 9px;border-radius:999px;font-size:1rem;font-weight:800;}
+  .stat-tile .sub span{padding:3px 9px;border-radius:999px;font-size:1rem;font-weight:800;}
+  .stat-tile .sub .sub-f{background:#db2777;}
+  .stat-tile .sub .sub-g{background:#1d4ed8;}
   .stat-section-title{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:18px 0 8px;}
   .stat-section-title:first-of-type{margin-top:4px;}
 
@@ -487,6 +489,9 @@ function computeStats(rows){
     validesSN: rows.filter(s=>s.sn_niveau==='TB'||s.sn_niveau==='S').length,
     validesPN: rows.filter(s=>s.pn_valide==='Oui').length,
     groupes,
+    // Une vignette par valeur de Statut réellement présente (texte libre venant
+    // du Google Sheet), absente si personne n'a de statut renseigné.
+    statuts: uniqueValues(rows,'statut').map(v => ({ label: v, ...breakdown(rows.filter(s=>s.statut===v)) })),
   };
 }
 function niveauBadge(v){
@@ -705,6 +710,8 @@ function renderClassTab(classe){
   ];
 
   const {html, filtered} = buildTable(domId, columns, rows, {rowClickable:true});
+  const nbStatut = rows.filter(s=>s.statut).length;
+  const statutChip = nbStatut ? `<div class="chip" style="background:var(--c8)"><b>${nbStatut}</b>Avec statut</div>` : '';
   panel.innerHTML = `
     <div class="chips">
       <div class="chip" style="background:var(--c1)"><b>${st.nb}</b>Élèves</div>
@@ -715,6 +722,7 @@ function renderClassTab(classe){
       <div class="chip" style="background:var(--c5)"><b>${st.nonNageurs}</b>Groupe non nageur</div>
       <div class="chip" style="background:var(--c2)"><b>${st.validesSN}</b>Savoir nager validé</div>
       <div class="chip" style="background:var(--c9)"><b>${st.validesPN}</b>Pass nautique validé</div>
+      ${statutChip}
     </div>
     <div class="card">
       <div class="toolbar">
@@ -746,13 +754,16 @@ function simpleTile(label, value, color){
 }
 // Vignette groupe : effectif total, avec le détail filles/garçons dans la même carte.
 function groupTile(label, b, color){
-  return `<div class="stat-tile" style="background:var(--${color})"><b>${b.total}</b><span>${label}</span><div class="sub"><span>👧 ${b.filles}</span><span>👦 ${b.garcons}</span></div></div>`;
+  return `<div class="stat-tile" style="background:var(--${color})"><b>${b.total}</b><span>${label}</span><div class="sub"><span class="sub-f">👧 ${b.filles}</span><span class="sub-g">👦 ${b.garcons}</span></div></div>`;
 }
 
 function statCardHtml(title, st){
   const repartitionTiles = GROUPE_ORDER.map(g => groupTile(GROUPE_LABELS[g], st.groupes[g], GROUPE_COLORS[g])).join('');
   const snTiles = GROUPE_ORDER.map(g => groupTile(GROUPE_LABELS[g], st.groupes[g].sn, 'c2')).join('');
   const pnTiles = GROUPE_ORDER_PN.map(g => groupTile(GROUPE_LABELS[g], st.groupes[g].pn, 'c9')).join('');
+  const statutSection = st.statuts.length ? `
+      <div class="stat-section-title">Statut</div>
+      <div class="stat-tiles">${st.statuts.map(s => groupTile(s.label, s, 'c8')).join('')}</div>` : '';
   return `
     <div class="stat-card">
       <h3>${title}</h3>
@@ -767,6 +778,7 @@ function statCardHtml(title, st){
       <div class="stat-tiles">${snTiles}</div>
       <div class="stat-section-title">Pass nautique validé</div>
       <div class="stat-tiles">${pnTiles}</div>
+      ${statutSection}
     </div>`;
 }
 function renderStats(){
