@@ -106,13 +106,14 @@
   .stat-card h3{margin:0 0 14px;font-size:1.2rem;}
   .stat-tiles{display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;}
   .stat-tiles-wide{grid-template-columns:repeat(auto-fit,minmax(100px,1fr));}
-  .stat-subrow{display:flex;gap:16px;align-items:flex-start;}
-  .stat-subgroup{flex:1;min-width:0;}
-  .stat-subgroup-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:0 0 6px;}
-  .stat-tile{border-radius:12px;padding:14px 6px;color:#fff;text-align:center;}
+  .stat-subrow{display:flex;gap:16px;align-items:stretch;margin-top:18px;}
+  .stat-subgroup{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .stat-subgroup-title{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:0 0 8px;}
+  .stat-subgroup .stat-tiles{flex:1;}
+  .stat-tile{display:flex;flex-direction:column;border-radius:12px;padding:14px 6px;color:#fff;text-align:center;}
   .stat-tile b{display:block;font-size:1.9rem;line-height:1.15;}
   .stat-tile span{font-size:.85rem;opacity:.95;line-height:1.2;}
-  .stat-tile .sub{display:flex;justify-content:center;gap:8px;margin-top:8px;}
+  .stat-tile .sub{display:flex;justify-content:center;gap:8px;margin-top:auto;padding-top:8px;}
   .stat-tile .sub span{padding:3px 9px;border-radius:999px;font-size:1rem;font-weight:800;}
   .stat-tile .sub .sub-f{background:#f472b6;}
   .stat-tile .sub .sub-g{background:#1d4ed8;}
@@ -225,20 +226,23 @@
     .stats-title{ margin-bottom:10px; }
     .stats-title h2{ font-size:1.3rem !important; }
     .stats-subtitle{ font-size:.85rem !important; }
-    .stats-grid{ grid-template-columns:repeat(4,1fr) !important; gap:8px !important; margin-top:8px !important; flex:1; grid-auto-rows:1fr; }
-    .stat-card{ padding:8px !important; box-shadow:none !important; border:1px solid #ddd; break-inside:avoid; display:flex; flex-direction:column; }
-    .stats-grid .stat-card{ height:100%; justify-content:space-evenly; }
-    .stat-card h3{ font-size:.78rem !important; margin:0 0 5px !important; }
-    .stat-tiles{ gap:4px !important; }
-    .stat-tiles-wide{ grid-template-columns:repeat(auto-fit,minmax(64px,1fr)) !important; }
-    .stat-tile{ padding:6px 3px !important; border-radius:6px !important; }
-    .stat-tile b{ font-size:1rem !important; line-height:1.1 !important; }
-    .stat-tile span{ font-size:.52rem !important; line-height:1.15 !important; }
-    .stat-tile .sub{ margin-top:3px !important; gap:4px !important; }
-    .stat-tile .sub span{ font-size:.52rem !important; padding:1px 5px !important; }
-    .stat-section-title{ font-size:.52rem !important; margin:6px 0 3px !important; }
-    .stat-subrow{ gap:8px !important; }
-    .stat-subgroup-title{ font-size:.52rem !important; margin:0 0 3px !important; }
+    .stats-grid{ grid-template-columns:repeat(4,1fr) !important; gap:10px !important; margin-top:10px !important; flex:1; align-items:start; }
+    .stat-card{ padding:10px !important; box-shadow:none !important; border:1px solid #ddd; break-inside:avoid; display:flex; flex-direction:column; }
+    /* Pas de distribution interne (space-evenly) : chaque carte garde le même
+       empilement de sections dans le même ordre, donc les vignettes Effectifs /
+       Répartition / Savoir nager / Pass nautique s'alignent naturellement entre
+       les 4 classes, qu'il y ait ou non une section Statut en plus en bas. */
+    .stat-card h3{ font-size:.85rem !important; margin:0 0 6px !important; }
+    .stat-tiles{ gap:5px !important; }
+    .stat-tiles-wide{ grid-template-columns:repeat(auto-fit,minmax(68px,1fr)) !important; }
+    .stat-tile{ padding:8px 4px !important; border-radius:7px !important; }
+    .stat-tile b{ font-size:1.25rem !important; line-height:1.1 !important; }
+    .stat-tile span{ font-size:.6rem !important; line-height:1.15 !important; }
+    .stat-tile .sub{ margin-top:auto !important; padding-top:4px !important; gap:4px !important; }
+    .stat-tile .sub span{ font-size:.6rem !important; padding:2px 6px !important; }
+    .stat-section-title{ font-size:.6rem !important; margin:10px 0 4px !important; }
+    .stat-subrow{ gap:10px !important; margin-top:10px !important; }
+    .stat-subgroup-title{ font-size:.6rem !important; margin:0 0 4px !important; }
   }
 </style>
 </head>
@@ -313,10 +317,10 @@ const SN_CRITERIA_BY_KEY = Object.fromEntries(SN_CRITERIA.map(c=>[c.key,c]));
 
 const PN_CRITERIA = [
   {key:'pn_entree_saut', label:"Entrée dans l'eau par un saut"},
-  {key:'pn_maintien_vertical', label:"Maintien vertical 5 sec"},
   {key:'pn_etoile_dorsale', label:"Étoile dorsale 5 sec"},
   {key:'pn_nage_ventrale', label:"Nage ventrale 20m"},
   {key:'pn_immersion', label:"Immersion"},
+  {key:'pn_maintien_vertical', label:"Maintien vertical 5 sec"},
 ];
 
 const LEVEL_EMOJI = {
