@@ -98,10 +98,11 @@
 
   .empty-state{padding:40px;text-align:center;color:var(--muted);}
 
-  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:20px;}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-top:20px;}
   .stat-card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
   .stat-card h3{margin:0 0 14px;font-size:1.2rem;}
   .stat-tiles{display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;}
+  .stat-tiles-wide{grid-template-columns:repeat(auto-fit,minmax(100px,1fr));}
   .stat-tile{border-radius:12px;padding:14px 6px;color:#fff;text-align:center;}
   .stat-tile b{display:block;font-size:1.9rem;line-height:1.15;}
   .stat-tile span{font-size:.85rem;opacity:.95;line-height:1.2;}
@@ -201,6 +202,28 @@
     nav.tabs{top:58px;padding:8px 10px;}
     .chips{flex-wrap:wrap;}
     .chip{flex:1 1 calc(33% - 5px);min-width:80px;}
+  }
+
+  /* ---- Export PDF de l'onglet Statistiques : A4 portrait, 1 page, mêmes
+     couleurs/structure qu'à l'écran (juste réduit pour tenir sur la page) ---- */
+  @media print{
+    @page{ size: A4 portrait; margin: 8mm; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    body > *:not(main){ display:none !important; }
+    main{ padding:0; max-width:none; }
+    .panel:not(#panel-stats){ display:none !important; }
+    .no-print{ display:none !important; }
+    .stats-grid{ grid-template-columns:repeat(4,1fr) !important; gap:5px !important; margin-top:6px !important; }
+    .stat-card{ padding:6px !important; box-shadow:none !important; border:1px solid #ddd; break-inside:avoid; }
+    .stat-card h3{ font-size:.72rem !important; margin:0 0 4px !important; }
+    .stat-tiles{ gap:3px !important; }
+    .stat-tiles-wide{ grid-template-columns:repeat(auto-fit,minmax(58px,1fr)) !important; }
+    .stat-tile{ padding:4px 2px !important; border-radius:5px !important; }
+    .stat-tile b{ font-size:.82rem !important; line-height:1.05 !important; }
+    .stat-tile span{ font-size:.46rem !important; line-height:1.1 !important; }
+    .stat-tile .sub{ margin-top:2px !important; gap:3px !important; }
+    .stat-tile .sub span{ font-size:.46rem !important; padding:1px 4px !important; }
+    .stat-section-title{ font-size:.46rem !important; margin:5px 0 2px !important; }
   }
 </style>
 </head>
@@ -685,7 +708,7 @@ function renderGeneral(){
   wireTable(panel, 'general', columns, {
     rerender: renderGeneral,
     exportRows: ()=>filtered,
-    exportName: 'eleves_general.xlsx'
+    exportName: '2026-2027 résultats savoir nager.xlsx'
   });
   document.getElementById('genImport').addEventListener('click', importCollegeList);
 }
@@ -750,28 +773,40 @@ const GROUPE_LABELS = {Fort:'Groupe fort', Moyen:'Groupe moyen', 'Non nageur':'G
 const GROUPE_COLORS = {Fort:'c7', Moyen:'c4', 'Non nageur':'c5'};
 
 function simpleTile(label, value, color){
-  return `<div class="stat-tile" style="background:var(--${color})"><b>${value}</b><span>${label}</span></div>`;
+  const bg = color.startsWith('#') ? color : 'var(--' + color + ')';
+  return `<div class="stat-tile" style="background:${bg}"><b>${value}</b><span>${label}</span></div>`;
 }
 // Vignette groupe : effectif total, avec le détail filles/garçons dans la même carte.
 function groupTile(label, b, color){
   return `<div class="stat-tile" style="background:var(--${color})"><b>${b.total}</b><span>${label}</span><div class="sub"><span class="sub-f">👧 ${b.filles}</span><span class="sub-g">👦 ${b.garcons}</span></div></div>`;
 }
 
-function statCardHtml(title, st){
+function statCardHtml(title, st, opts={}){
   const repartitionTiles = GROUPE_ORDER.map(g => groupTile(GROUPE_LABELS[g], st.groupes[g], GROUPE_COLORS[g])).join('');
   const snTiles = GROUPE_ORDER.map(g => groupTile(GROUPE_LABELS[g], st.groupes[g].sn, 'c2')).join('');
   const pnTiles = GROUPE_ORDER_PN.map(g => groupTile(GROUPE_LABELS[g], st.groupes[g].pn, 'c9')).join('');
+  const effectifsTiles = simpleTile('Élèves', st.nb, '#000000') + simpleTile('Garçons', st.garcons, '#1d4ed8') + simpleTile('Filles', st.filles, 'c3');
+  const wideCls = opts.merged ? ' stat-tiles-wide' : '';
   const statutSection = st.statuts.length ? `
       <div class="stat-section-title">Statut</div>
-      <div class="stat-tiles">${st.statuts.map(s => groupTile(s.label, s, 'c8')).join('')}</div>` : '';
+      <div class="stat-tiles${wideCls}">${st.statuts.map(s => groupTile(s.label, s, 'c8')).join('')}</div>` : '';
+  // Carte "Général" : effectifs + répartition groupe sur une même ligne, puis
+  // savoir nager + pass nautique sur une même ligne (demande explicite).
+  if(opts.merged){
+    return `
+    <div class="stat-card">
+      <h3>${title}</h3>
+      <div class="stat-section-title">Effectifs &amp; Répartition groupe (départ)</div>
+      <div class="stat-tiles stat-tiles-wide">${effectifsTiles}${repartitionTiles}</div>
+      <div class="stat-section-title">Savoir nager / Pass nautique validé</div>
+      <div class="stat-tiles stat-tiles-wide">${snTiles}${pnTiles}</div>
+      ${statutSection}
+    </div>`;
+  }
   return `
     <div class="stat-card">
       <h3>${title}</h3>
-      <div class="stat-tiles">
-        ${simpleTile('Élèves', st.nb, 'c1')}
-        ${simpleTile('Garçons', st.garcons, 'c6')}
-        ${simpleTile('Filles', st.filles, 'c3')}
-      </div>
+      <div class="stat-tiles">${effectifsTiles}</div>
       <div class="stat-section-title">Répartition groupe (départ)</div>
       <div class="stat-tiles">${repartitionTiles}</div>
       <div class="stat-section-title">Savoir nager validé</div>
@@ -783,12 +818,18 @@ function statCardHtml(title, st){
 }
 function renderStats(){
   const panel = document.getElementById('panel-stats');
-  const generalCard = statCardHtml('Général (toutes classes)', computeStats(STUDENTS));
+  const generalCard = statCardHtml('Général (toutes classes)', computeStats(STUDENTS), {merged:true});
   const classCards = CLASSES.map(classe=>{
     const rows = STUDENTS.filter(s=>s.classe===classe);
     return statCardHtml(classe, computeStats(rows));
   }).join('');
-  panel.innerHTML = `<div class="stats-grid">${generalCard}${classCards}</div>`;
+  panel.innerHTML = `
+    <div class="toolbar no-print" style="margin-bottom:12px;">
+      <div class="left"></div>
+      <button class="btn secondary" id="statsExportPdf">🖨️ Exporter PDF</button>
+    </div>
+    ${generalCard}<div class="stats-grid">${classCards}</div>`;
+  document.getElementById('statsExportPdf').addEventListener('click', ()=>window.print());
 }
 
 /* --------------------------------------------------------- EXCEL export */
