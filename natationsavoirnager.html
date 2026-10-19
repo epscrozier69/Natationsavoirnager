@@ -98,15 +98,16 @@
 
   .empty-state{padding:40px;text-align:center;color:var(--muted);}
 
-  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
-  .stat-card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;}
-  .stat-card h3{margin:0 0 12px;font-size:1.05rem;}
-  .stat-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;}
-  .stat-tile{border-radius:10px;padding:10px;color:#fff;text-align:center;}
-  .stat-tile b{display:block;font-size:1.4rem;}
-  .stat-tile span{font-size:.68rem;opacity:.9;}
-  .stat-tile .sub{display:flex;justify-content:center;gap:10px;margin-top:4px;font-size:.68rem;opacity:.95;}
-  .stat-section-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:14px 0 6px;}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:20px;}
+  .stat-card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+  .stat-card h3{margin:0 0 14px;font-size:1.2rem;}
+  .stat-tiles{display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;}
+  .stat-tile{border-radius:12px;padding:14px 6px;color:#fff;text-align:center;}
+  .stat-tile b{display:block;font-size:1.9rem;line-height:1.15;}
+  .stat-tile span{font-size:.85rem;opacity:.95;line-height:1.2;}
+  .stat-tile .sub{display:flex;justify-content:center;gap:8px;margin-top:8px;}
+  .stat-tile .sub span{background:rgba(0,0,0,.32);padding:3px 9px;border-radius:999px;font-size:1rem;font-weight:800;}
+  .stat-section-title{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:18px 0 8px;}
   .stat-section-title:first-of-type{margin-top:4px;}
 
   /* Modal */
@@ -1062,7 +1063,17 @@ async function importCollegeList(){
     renderAll();
     const removedMsg = res.removed ? ` ${res.removed} élève(s) absent(s) de la liste retiré(s).` : '';
     const mergedMsg = res.merged ? ` ${res.merged} doublon(s) fusionné(s) (élèves ayant changé de classe).` : '';
-    alert(`Import terminé : ${res.added} élève(s) ajouté(s), ${res.updated} déjà inscrit(s) et mis à jour (classe/sexe/groupe/statut).${removedMsg}${mergedMsg}`);
+    // Diagnostic temporaire pour localiser pourquoi la colonne Statut ne se
+    // met pas à jour chez l'utilisateur, sans avoir à ouvrir les journaux
+    // d'exécution Apps Script.
+    let diagMsg = '';
+    if(res.diag){
+      const d = res.diag;
+      diagMsg = `\n\n[Diagnostic Statut] colonne détectée dans "Liste des élèves du collège" : ${d.statutColonneSource >= 0 ? 'oui (colonne ' + String.fromCharCode(65 + d.statutColonneSource) + ')' : 'NON'}.`
+        + ` Colonne "statut" dans "Resultats" : ${d.statutColonneResultats >= 0 ? 'oui' : 'NON'}.`
+        + (d.statutExempleBrut !== null ? ` Exemple lu pour ${d.statutExempleEleve} : "${d.statutExempleBrut}".` : ' Aucune valeur non vide trouvée dans la colonne Statut source.');
+    }
+    alert(`Import terminé : ${res.added} élève(s) ajouté(s), ${res.updated} déjà inscrit(s) et mis à jour (classe/sexe/groupe/statut).${removedMsg}${mergedMsg}${diagMsg}`);
   }catch(err){
     alert("Erreur lors de l'import : " + err.message);
     setSync('bad','Erreur de synchro');
