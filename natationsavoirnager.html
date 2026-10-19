@@ -94,6 +94,10 @@
   .badge.grpNonNageur{background:var(--bad);}
   .badge.sexeF{background:var(--c3);}
   .badge.sexeG{background:var(--c1);}
+  .badge.statutAbsent{background:var(--bad);}
+  .badge.statutDP{background:var(--warn);}
+  .badge.statutDispense{background:var(--warn);}
+  .badge.statutNonIntegre{background:var(--bad);}
 
   .empty-state{padding:40px;text-align:center;color:var(--muted);}
 
@@ -484,6 +488,11 @@ function groupeBadge(v){
   const emoji = {'Fort':'💪', 'Moyen':'🟡', 'Non nageur':'🔴'}[v] || '';
   return '<span class="badge '+cls+'">'+emoji+' '+v+'</span>';
 }
+function statutBadge(v){
+  if(!v) return '<span class="badge empty">—</span>';
+  const cls = {'Absent':'statutAbsent', 'DP':'statutDP', 'Dispensé de natation':'statutDispense', 'Non intégré en EPS':'statutNonIntegre'}[v] || 'empty';
+  return '<span class="badge '+cls+'">'+v+'</span>';
+}
 function sexeBadge(v){
   const norm = String(v||'').trim().toUpperCase();
   if(norm==='F') return '<span class="badge sexeF">F</span>';
@@ -626,6 +635,7 @@ function renderGeneral(){
     {key:'classe', label:'Classe', getValue:r=>r.classe, filterType:'select', filterOptions:CLASSES},
     {key:'sexe', label:'Sexe', getValue:r=>r.sexe, render:r=>sexeBadge(r.sexe), filterType:'select', filterOptions:['F','G']},
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
+    {key:'statut', label:'Statut', getValue:r=>r.statut, render:r=>statutBadge(r.statut), filterType:'select', filterOptions:['Absent','DP','Dispensé de natation','Non intégré en EPS']},
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'sn_date', label:'Date SN', getValue:r=>r.sn_date, render:r=>fmtDate(r.sn_date)},
     {key:'sn_prof', label:'Prof SN', getValue:r=>r.sn_prof, filterType:'select', filterOptions:PROFS},
@@ -665,6 +675,7 @@ function renderClassTab(classe){
     {key:'prenom', label:'Prénom', getValue:r=>r.prenom},
     {key:'sexe', label:'Sexe', getValue:r=>r.sexe, render:r=>sexeBadge(r.sexe), filterType:'select', filterOptions:['F','G']},
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
+    {key:'statut', label:'Statut', getValue:r=>r.statut, render:r=>statutBadge(r.statut), filterType:'select', filterOptions:['Absent','DP','Dispensé de natation','Non intégré en EPS']},
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'pn_valide', label:'Pass Naut.', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
     {key:'derniere_maj', label:'Date', getValue:r=>[r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'', render:r=>fmtDate([r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'')},
@@ -729,7 +740,7 @@ function renderStats(){
 /* --------------------------------------------------------- EXCEL export */
 function exportExcel(rows, filename){
   const data = rows.map(r=>({
-    Nom:r.nom, Prénom:r.prenom, Classe:r.classe, Sexe:r.sexe, 'Groupe':r.groupe||'',
+    Nom:r.nom, Prénom:r.prenom, Classe:r.classe, Sexe:r.sexe, 'Groupe':r.groupe||'', 'Statut':r.statut||'',
     'Niveau Savoir Nager':r.sn_niveau||'', 'Date SN':fmtDate(r.sn_date), 'Prof SN':r.sn_prof||'',
     'Pass Nautique':r.pn_valide||'', 'Date PN':fmtDate(r.pn_date), 'Prof PN':r.pn_prof||'',
   }));
@@ -1010,7 +1021,7 @@ async function importCollegeList(){
     renderAll();
     const removedMsg = res.removed ? ` ${res.removed} élève(s) absent(s) de la liste retiré(s).` : '';
     const mergedMsg = res.merged ? ` ${res.merged} doublon(s) fusionné(s) (élèves ayant changé de classe).` : '';
-    alert(`Import terminé : ${res.added} élève(s) ajouté(s), ${res.updated} déjà inscrit(s) et mis à jour (classe/sexe/groupe).${removedMsg}${mergedMsg}`);
+    alert(`Import terminé : ${res.added} élève(s) ajouté(s), ${res.updated} déjà inscrit(s) et mis à jour (classe/sexe/groupe/statut).${removedMsg}${mergedMsg}`);
   }catch(err){
     alert("Erreur lors de l'import : " + err.message);
     setSync('bad','Erreur de synchro');
