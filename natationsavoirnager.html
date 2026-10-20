@@ -171,7 +171,8 @@
   .cb-opt .emoji{font-size:1rem;line-height:1.1;}
   .cb-opt .code{font-weight:800;font-size:.7rem;color:var(--ink);letter-spacing:.02em;}
   .cb-opt small{font-weight:400;color:var(--muted);font-size:.54rem;line-height:1.05;max-width:96px;}
-  .cb-opt.checked{box-shadow:0 2px 6px rgba(0,0,0,.08);}
+  .cb-opt.checked{box-shadow:0 2px 6px rgba(0,0,0,.08);background:#eef2ff;border-color:var(--c7);}
+  .cb-opt.checked .code{color:var(--c7);}
   .inline-row{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:4px 0 5px;border-bottom:1px solid #f1f5f9;}
   .inline-row .inline-item{display:flex;flex-direction:column;gap:3px;}
   .inline-row .inline-item > label{font-weight:700;font-size:.74rem;}
@@ -193,6 +194,12 @@
   .cb-opt[data-val="Avec ceinture"].checked .code{color:#1d4ed8;}
   .cb-opt[data-val="Sans ceinture"].checked{background:#ffedd5;border-color:var(--c4);}
   .cb-opt[data-val="Sans ceinture"].checked .code{color:#c2410c;}
+  .cb-opt[data-val="Présent"].checked{background:#dcfce7;border-color:var(--ok);}
+  .cb-opt[data-val="Présent"].checked .code{color:#15803d;}
+  .cb-opt[data-val="Dispensé"].checked{background:#fee2e2;border-color:var(--bad);}
+  .cb-opt[data-val="Dispensé"].checked .code{color:#b91c1c;}
+  .cb-opt[data-val="Dispensé de natation"].checked{background:#ffedd5;border-color:var(--warn);}
+  .cb-opt[data-val="Dispensé de natation"].checked .code{color:#c2410c;}
   .meta-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
   .meta-row div{display:flex;flex-direction:column;gap:2px;}
   .meta-row label{font-size:.72rem;font-weight:600;color:var(--muted);}
@@ -514,6 +521,21 @@ function pnResultLabel(s){
   if(!ceinture) return '';
   if(valide === 'Oui') return ceinture === 'Avec ceinture' ? 'Validé AVEC ceinture' : 'Validé SANS ceinture';
   return ceinture === 'Sans ceinture' ? 'Non validé SANS CEINTURE' : 'Non validé AVEC CEINTURE';
+}
+// Variante avec symboles (✔️/❌), utilisée uniquement pour l'export Excel et
+// le Google Sheet (texte brut, sans badge HTML) : même texte que demandé
+// dans Fonctionnalités.md.
+function snResultLabelEmoji(s){
+  const label = snResultLabel(s);
+  if(label === 'ACQUIS') return 'ACQUIS ✔️';
+  if(label === 'NON ACQUIS') return 'NON ACQUIS ❌';
+  return label;
+}
+function pnResultLabelEmoji(s){
+  const label = pnResultLabel(s);
+  if(label.startsWith('Validé')) return label + ' ✔️';
+  if(label.startsWith('Non validé')) return label + ' ❌';
+  return label;
 }
 function pnResultBadge(s){
   const label = pnResultLabel(s);
@@ -910,9 +932,9 @@ function exportExcel(rows, filename){
   const data = rows.map(r=>({
     Nom:r.nom, Prénom:r.prenom, Classe:r.classe, Sexe:r.sexe, 'Groupe':r.groupe||'', 'Statut':r.statut||'',
     'Niveau Savoir Nager':r.sn_niveau||'', 'Date SN':fmtDate(r.sn_date), 'Prof SN':r.sn_prof||'',
-    'Statut test SN':r.sn_statut||'Présent', 'Savoir nager':snResultLabel(r)||'',
+    'Statut test SN':r.sn_statut||'Présent', 'Savoir nager':snResultLabelEmoji(r)||'',
     'Pass Nautique':r.pn_valide||'', 'Date PN':fmtDate(r.pn_date), 'Prof PN':r.pn_prof||'',
-    'Statut test PN':r.pn_statut||'Présent', 'Pass nautique':pnResultLabel(r)||'',
+    'Statut test PN':r.pn_statut||'Présent', 'Pass nautique':pnResultLabelEmoji(r)||'',
   }));
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
