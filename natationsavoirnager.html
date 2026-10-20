@@ -328,11 +328,14 @@ const LEVEL_EMOJI = {
   Oui:'✅', Non:'🚫',
   'Avec ceinture':'🦺', 'Sans ceinture':'🙅',
   Joud:'🧑‍🏫', Mekraldi:'🧑‍🏫', Crozier:'🧑‍🏫', 'Goutte-Toquet':'🧑‍🏫',
+  'Présent':'🟢', 'Dispensé':'⛔', 'Dispensé de natation':'🏖️',
 };
 
+const TEST_STATUT_OPTIONS = [['Présent','Présent'],['Dispensé','Dispensé'],['Dispensé de natation','Dispensé de natation']];
+
 const FIELDS = ['id','nom','prenom','classe','sexe','groupe',
-  ...SN_CRITERIA.map(c=>c.key), 'sn_ancrage','sn_prof','sn_date','sn_niveau',
-  ...PN_CRITERIA.map(c=>c.key), 'pn_ceinture','pn_prof','pn_date','pn_valide'];
+  ...SN_CRITERIA.map(c=>c.key), 'sn_ancrage','sn_prof','sn_date','sn_statut','sn_niveau',
+  ...PN_CRITERIA.map(c=>c.key), 'pn_ceinture','pn_prof','pn_date','pn_statut','pn_valide'];
 
 /* ------------------------------------------------------------ STATE --- */
 // URL du déploiement Apps Script. En cas de migration vers un nouveau
@@ -483,6 +486,41 @@ function computeValidePN(s){
   const vals = PN_CRITERIA.map(c=>s[c.key]).filter(v=>v);
   if(vals.length < PN_CRITERIA.length) return '';
   return vals.every(v=>v==='Oui') ? 'Oui' : 'Non';
+}
+// Résultat final "Savoir nager" affiché : tient compte du statut du jour du
+// test (présent / dispensé / dispensé de natation) en plus du niveau calculé.
+function snResultLabel(s){
+  const statut = s.sn_statut || 'Présent';
+  if(statut !== 'Présent') return statut;
+  const niveau = computeNiveauSN(s);
+  if(!niveau) return '';
+  return niveau === 'Non réussi' ? 'NON ACQUIS' : 'ACQUIS';
+}
+function snResultBadge(s){
+  const label = snResultLabel(s);
+  if(!label) return '<span class="badge empty">— À évaluer</span>';
+  if(label === 'ACQUIS') return '<span class="badge TB">✔️ ACQUIS</span>';
+  if(label === 'NON ACQUIS') return '<span class="badge nonreussi">❌ NON ACQUIS</span>';
+  return '<span class="badge statutValeur">'+(LEVEL_EMOJI[label]||'')+' '+label+'</span>';
+}
+// Résultat final "Pass nautique" affiché : combine validation + modalité
+// (avec/sans ceinture) et tient compte du statut du jour du test.
+function pnResultLabel(s){
+  const statut = s.pn_statut || 'Présent';
+  if(statut !== 'Présent') return statut;
+  const valide = computeValidePN(s);
+  if(!valide) return '';
+  const ceinture = s.pn_ceinture;
+  if(!ceinture) return '';
+  if(valide === 'Oui') return ceinture === 'Avec ceinture' ? 'Validé AVEC ceinture' : 'Validé SANS ceinture';
+  return ceinture === 'Sans ceinture' ? 'Non validé SANS CEINTURE' : 'Non validé AVEC CEINTURE';
+}
+function pnResultBadge(s){
+  const label = pnResultLabel(s);
+  if(!label) return '<span class="badge empty">— À évaluer</span>';
+  if(label.startsWith('Validé')) return '<span class="badge Oui">✔️ '+label+'</span>';
+  if(label.startsWith('Non validé')) return '<span class="badge nonreussi">❌ '+label+'</span>';
+  return '<span class="badge statutValeur">'+(LEVEL_EMOJI[label]||'')+' '+label+'</span>';
 }
 function todayISO(){
   const d = new Date();
@@ -708,9 +746,11 @@ function renderGeneral(){
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'sn_date', label:'Date SN', getValue:r=>r.sn_date, render:r=>fmtDate(r.sn_date)},
     {key:'sn_prof', label:'Prof SN', getValue:r=>r.sn_prof, filterType:'select', filterOptions:PROFS},
+    {key:'sn_resultat', label:'Savoir nager', getValue:r=>snResultLabel(r), render:r=>snResultBadge(r), filterType:'select', filterOptions:['ACQUIS','NON ACQUIS','Dispensé','Dispensé de natation']},
     {key:'pn_valide', label:'Pass Naut.', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
     {key:'pn_date', label:'Date PN', getValue:r=>r.pn_date, render:r=>fmtDate(r.pn_date)},
     {key:'pn_prof', label:'Prof PN', getValue:r=>r.pn_prof, filterType:'select', filterOptions:PROFS},
+    {key:'pn_resultat', label:'Pass nautique', getValue:r=>pnResultLabel(r), render:r=>pnResultBadge(r), filterType:'select', filterOptions:['Validé AVEC ceinture','Validé SANS ceinture','Non validé SANS CEINTURE','Non validé AVEC CEINTURE','Dispensé','Dispensé de natation']},
     {key:'actions', label:'', filterType:false, getValue:()=>'', render:r=>`<button class="btn danger small icon-only" data-action="delete" data-id="${r.id}" title="Supprimer">🗑️</button>`},
   ];
   const {html, filtered} = buildTable('general', columns, STUDENTS, {rowClickable:false});
@@ -746,7 +786,9 @@ function renderClassTab(classe){
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
     {key:'statut', label:'Statut', getValue:r=>r.statut, render:r=>statutBadge(r.statut), filterType:'select', filterOptions:uniqueValues(rows,'statut')},
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
+    {key:'sn_resultat', label:'Savoir nager', getValue:r=>snResultLabel(r), render:r=>snResultBadge(r), filterType:'select', filterOptions:['ACQUIS','NON ACQUIS','Dispensé','Dispensé de natation']},
     {key:'pn_valide', label:'Pass Naut.', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
+    {key:'pn_resultat', label:'Pass nautique', getValue:r=>pnResultLabel(r), render:r=>pnResultBadge(r), filterType:'select', filterOptions:['Validé AVEC ceinture','Validé SANS ceinture','Non validé SANS CEINTURE','Non validé AVEC CEINTURE','Dispensé','Dispensé de natation']},
     {key:'derniere_maj', label:'Date', getValue:r=>[r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'', render:r=>fmtDate([r.sn_date,r.pn_date].filter(Boolean).sort().pop()||'')},
     {key:'actions', label:'', filterType:false, getValue:()=>'', render:r=>`<button class="btn small icon-only" data-action="open" data-id="${r.id}" title="Voir / Modifier">✏️</button>`},
   ];
@@ -868,7 +910,9 @@ function exportExcel(rows, filename){
   const data = rows.map(r=>({
     Nom:r.nom, Prénom:r.prenom, Classe:r.classe, Sexe:r.sexe, 'Groupe':r.groupe||'', 'Statut':r.statut||'',
     'Niveau Savoir Nager':r.sn_niveau||'', 'Date SN':fmtDate(r.sn_date), 'Prof SN':r.sn_prof||'',
+    'Statut test SN':r.sn_statut||'Présent', 'Savoir nager':snResultLabel(r)||'',
     'Pass Nautique':r.pn_valide||'', 'Date PN':fmtDate(r.pn_date), 'Prof PN':r.pn_prof||'',
+    'Statut test PN':r.pn_statut||'Présent', 'Pass nautique':pnResultLabel(r)||'',
   }));
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
@@ -968,6 +1012,7 @@ function openModal(id){
         <div class="criteria-col">${snCol1}</div>
         <div class="criteria-col">${snCol2}</div>
       </div>
+      ${choiceGroup('Statut', 'sn_statut', s.sn_statut||'Présent', TEST_STATUT_OPTIONS)}
       <div class="inline-row">
         <div class="inline-item">
           <label>Professeur</label>
@@ -981,6 +1026,10 @@ function openModal(id){
           <label>Niveau validé</label>
           <span id="niveauSNDisplay">${niveauBadge(computeNiveauSN(s))}</span>
         </div>
+        <div class="inline-item niveau-item">
+          <label>Savoir nager</label>
+          <span id="snResultDisplay">${snResultBadge(s)}</span>
+        </div>
       </div>
     </div>
 
@@ -989,6 +1038,7 @@ function openModal(id){
         ${pnRows}
         ${choiceGroup('Test réalisé', 'pn_ceinture', s.pn_ceinture, [['Avec ceinture','Avec ceinture'],['Sans ceinture','Sans ceinture']])}
       </div>
+      ${choiceGroup('Statut', 'pn_statut', s.pn_statut||'Présent', TEST_STATUT_OPTIONS)}
       <div class="inline-row">
         <div class="inline-item">
           <label>Professeur</label>
@@ -1002,6 +1052,10 @@ function openModal(id){
           <label>Pass nautique validé</label>
           <span id="valideePNDisplay">${ouiNonBadge(computeValidePN(s))}</span>
         </div>
+        <div class="inline-item niveau-item">
+          <label>Pass nautique</label>
+          <span id="pnResultDisplay">${pnResultBadge(s)}</span>
+        </div>
       </div>
     </div>
   `;
@@ -1011,18 +1065,18 @@ function openModal(id){
   });
   setModalTestType(initialType);
 
-  wireChoiceGroups((changedField)=>{
-    autofillDates(s, changedField);
-    const draft = collectDraft(s);
+  const refreshResultDisplays = (draft)=>{
     document.getElementById('niveauSNDisplay').innerHTML = niveauBadge(computeNiveauSN(draft));
     document.getElementById('valideePNDisplay').innerHTML = ouiNonBadge(computeValidePN(draft));
+    document.getElementById('snResultDisplay').innerHTML = snResultBadge(draft);
+    document.getElementById('pnResultDisplay').innerHTML = pnResultBadge(draft);
+  };
+  wireChoiceGroups((changedField)=>{
+    autofillDates(s, changedField);
+    refreshResultDisplays(collectDraft(s));
   });
   document.querySelectorAll('#modalBody select[data-field], #modalBody input[type=date][data-field]').forEach(el=>{
-    el.addEventListener('change', ()=>{
-      const draft = collectDraft(s);
-      document.getElementById('niveauSNDisplay').innerHTML = niveauBadge(computeNiveauSN(draft));
-      document.getElementById('valideePNDisplay').innerHTML = ouiNonBadge(computeValidePN(draft));
-    });
+    el.addEventListener('change', ()=> refreshResultDisplays(collectDraft(s)));
   });
 
   document.getElementById('studentOverlay').classList.add('show');
