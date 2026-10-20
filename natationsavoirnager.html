@@ -500,8 +500,9 @@ function snResultLabel(s){
   const statut = s.sn_statut || 'Présent';
   if(statut !== 'Présent') return statut;
   const niveau = computeNiveauSN(s);
-  if(!niveau) return '';
-  return niveau === 'Non réussi' ? 'NON ACQUIS' : 'ACQUIS';
+  if(!niveau || !s.sn_ancrage) return '';
+  if(niveau === 'Non réussi' || s.sn_ancrage === 'Non') return 'NON ACQUIS';
+  return 'ACQUIS';
 }
 function snResultBadge(s){
   const label = snResultLabel(s);
