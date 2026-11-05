@@ -1120,7 +1120,11 @@ function openModal(id){
     : snFieldGroup(SN_CRITERIA_BY_KEY[key], s[key]);
   const snCol1 = SN_COLUMN_1.map(snFieldHtml).join('');
   const snCol2 = SN_COLUMN_2.map(snFieldHtml).join('');
-  const pnRows = PN_CRITERIA.map(c=>ouiNonGroup(c.label, c.key, s[c.key])).join('');
+  const pnCriteriaByKey = Object.fromEntries(PN_CRITERIA.map(c=>[c.key,c]));
+  const pnField = key => ouiNonGroup(pnCriteriaByKey[key].label, key, s[key]);
+  const pnCol1 = choiceGroup('Test réalisé', 'pn_ceinture', s.pn_ceinture, [['Avec ceinture','Avec ceinture'],['Sans ceinture','Sans ceinture']])
+    + pnField('pn_entree_saut') + pnField('pn_maintien_vertical');
+  const pnCol2 = pnField('pn_etoile_dorsale') + pnField('pn_nage_ventrale') + pnField('pn_immersion');
 
   const hasSN = SN_CRITERIA.some(c=>s[c.key]) || s.sn_ancrage;
   const hasPN = PN_CRITERIA.some(c=>s[c.key]) || s.pn_ceinture;
@@ -1161,8 +1165,8 @@ function openModal(id){
 
     <div class="test-section" id="sectionPN">
       <div class="criteria-grid">
-        ${choiceGroup('Test réalisé', 'pn_ceinture', s.pn_ceinture, [['Avec ceinture','Avec ceinture'],['Sans ceinture','Sans ceinture']])}
-        ${pnRows}
+        <div class="criteria-col">${pnCol1}</div>
+        <div class="criteria-col">${pnCol2}</div>
       </div>
       ${choiceGroup('Statut', 'pn_statut', initialPnStatut, TEST_STATUT_OPTIONS)}
       <div class="inline-row">
