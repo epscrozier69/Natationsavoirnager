@@ -1360,39 +1360,33 @@ function chooseQcmValue(value){
 }
 
 // Enregistrement d'une fiche élève complète (fenêtre de saisie du test
-// pratique) : tente l'envoi direct au Google Sheet, et retombe sur la file
-// d'attente hors-ligne en cas d'échec réseau.
-async function persistStudent(draft){
+// pratique) : mise à jour locale et affichage immédiats, envoi au Google
+// Sheet en tâche de fond (file d'attente hors-ligne si ça échoue). Comme pour
+// la saisie rapide du QCM, on n'attend plus l'aller-retour réseau pour
+// fermer la fenêtre : c'était la cause du délai perçu avant de passer à
+// l'élève suivant.
+function persistStudent(draft){
+  upsertLocalStudent(draft);
+  saveCache();
+  renderAll();
   if(Date.now() < assumeOfflineUntil){
-    // Échec réseau récent : on n'attend pas un nouveau timeout, on passe direct au mode local.
-    upsertLocalStudent(draft);
     queueSave(draft);
-    saveCache();
-    renderAll();
-    setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi (enregistré localement)`);
+    setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi`);
     return;
   }
-  try{
-    await refreshAll(false); // récupérer les dernières données avant d'écrire (échoue silencieusement si hors ligne)
-    const res = await apiPost({action:'saveStudent', data:draft});
-    STUDENTS = res.students;
-    saveCache();
+  apiPost({action:'saveStudent', data:draft}).then(()=>{
     assumeOfflineUntil = 0;
     setSync('ok','Synchronisé ' + new Date().toLocaleTimeString());
-    renderAll();
-  }catch(err){
-    // Hors ligne ou erreur réseau : on enregistre quand même localement,
+  }).catch(()=>{
+    // Hors ligne ou erreur réseau : la saisie reste enregistrée localement,
     // la synchronisation se fera automatiquement au retour de la connexion.
     assumeOfflineUntil = Date.now() + 20000;
-    upsertLocalStudent(draft);
     queueSave(draft);
-    saveCache();
-    renderAll();
     setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi (enregistré localement)`);
-  }
+  });
 }
 
-async function saveModal(){
+function saveModal(){
   const s = STUDENTS.find(x=>x.id===currentEditId);
   if(!s) return;
   let draft = collectDraft(s);
@@ -1400,12 +1394,8 @@ async function saveModal(){
   if(PN_CRITERIA.some(c=>draft[c.key]) && !draft.pn_date) draft.pn_date = todayISO();
   draft.sn_niveau = computeNiveauSN(draft);
   draft.pn_valide = computeValidePN(draft);
-
-  const btn = document.getElementById('modalSave');
-  btn.disabled = true; btn.textContent = 'Enregistrement...';
-  await persistStudent(draft);
+  persistStudent(draft);
   closeModal();
-  btn.disabled = false; btn.textContent = '💾 Enregistrer';
 }
 
 async function deleteStudentPrompt(id){
