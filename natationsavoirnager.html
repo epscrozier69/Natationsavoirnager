@@ -806,6 +806,7 @@ function renderGeneral(){
     {key:'sexe', label:'Sexe', getValue:r=>r.sexe, render:r=>sexeBadge(r.sexe), filterType:'select', filterOptions:['F','G']},
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
     {key:'statut', label:'Statut', getValue:r=>r.statut, render:r=>statutBadge(r.statut), filterType:'select', filterOptions:uniqueValues(STUDENTS,'statut')},
+    {key:'sn_qcm', label:'QCM SN', getValue:r=>r.sn_qcm, render:r=>`<span class="qcm-cell" data-action="qcm" data-id="${r.id}">${codeBadge(r.sn_qcm)}</span>`, filterType:'select', filterOptions:['TB','S','F','I']},
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'sn_date', label:'Date SN', getValue:r=>r.sn_date, render:r=>fmtDate(r.sn_date)},
     {key:'sn_prof', label:'Prof SN', getValue:r=>r.sn_prof, filterType:'select', filterOptions:PROFS},
