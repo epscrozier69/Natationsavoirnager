@@ -136,9 +136,9 @@
   .modal-header h2{margin:0;font-size:1.05rem;}
   .modal-header .close{background:transparent;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1;}
   .modal-body{padding:10px 18px 14px;overflow-y:auto;flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;font-size:.9rem;}
-  .test-type-toggle{display:flex;gap:6px;margin-bottom:8px;position:sticky;top:-10px;background:#fff;padding-top:10px;z-index:5;}
+  .test-type-toggle{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;position:sticky;top:-10px;background:#fff;padding-top:10px;z-index:5;}
   .tt-btn{
-    flex:1;padding:8px;border-radius:9px;border:2px solid var(--line);background:#f8fafc;
+    flex:1;min-width:120px;padding:8px;border-radius:9px;border:2px solid var(--line);background:#f8fafc;
     font-weight:700;font-size:.82rem;cursor:pointer;color:var(--muted);transition:.15s;
   }
   .tt-btn:hover{border-color:var(--c1);}
@@ -1021,6 +1021,7 @@ function setModalTestType(type){
   document.querySelectorAll('.tt-btn').forEach(b=>b.classList.toggle('active', b.dataset.type===type));
   document.getElementById('sectionSN').classList.toggle('active', type==='sn');
   document.getElementById('sectionPN').classList.toggle('active', type==='pn');
+  document.getElementById('sectionQCM').classList.toggle('active', type==='qcm');
   document.getElementById('modalBody').scrollTop = 0;
 }
 
@@ -1039,7 +1040,10 @@ function openModal(id){
 
   const hasSN = SN_CRITERIA.some(c=>s[c.key]) || s.sn_ancrage;
   const hasPN = PN_CRITERIA.some(c=>s[c.key]) || s.pn_ceinture;
-  const initialType = (!hasSN && hasPN) ? 'pn' : 'sn';
+  const hasQCM = !!s.sn_qcm;
+  let initialType = 'sn';
+  if(!hasSN && hasPN) initialType = 'pn';
+  else if(!hasSN && !hasPN && hasQCM) initialType = 'qcm';
   // Statut : vide par défaut, "Présent" uniquement si au moins une épreuve a
   // déjà été renseignée (données existantes) — jamais pré-coché à vide.
   const initialSnStatut = s.sn_statut || (SN_CRITERIA.some(c=>s[c.key]) ? 'Présent' : '');
@@ -1049,6 +1053,7 @@ function openModal(id){
     <div class="test-type-toggle">
       <button type="button" class="tt-btn" data-type="sn">🏊 Savoir Nager</button>
       <button type="button" class="tt-btn" data-type="pn">🎽 Pass Nautique</button>
+      <button type="button" class="tt-btn" data-type="qcm">📝 QCM Savoir Nager</button>
     </div>
 
     <div class="test-section" id="sectionSN">
@@ -1057,7 +1062,6 @@ function openModal(id){
         <div class="criteria-col">${snCol1}</div>
         <div class="criteria-col">${snCol2}</div>
       </div>
-      ${choiceGroup('QCM Savoir Nager (indépendant du test pratique)', 'sn_qcm', s.sn_qcm, SN_QCM_OPTIONS, {wide:true})}
       ${choiceGroup('Statut', 'sn_statut', initialSnStatut, TEST_STATUT_OPTIONS)}
       <div class="inline-row">
         <div class="inline-item">
@@ -1103,6 +1107,11 @@ function openModal(id){
           <span id="pnResultDisplay">${pnResultBadge(s)}</span>
         </div>
       </div>
+    </div>
+
+    <div class="test-section" id="sectionQCM">
+      <div class="note">📝 Évaluation théorique (QCM), indépendante du test pratique du savoir nager.</div>
+      ${choiceGroup('QCM Savoir Nager', 'sn_qcm', s.sn_qcm, SN_QCM_OPTIONS, {wide:true})}
     </div>
   `;
 
