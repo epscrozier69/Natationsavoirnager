@@ -68,14 +68,12 @@
   }
   .chip b{display:block;font-size:1.1rem;}
 
-  .table-wrap{overflow:auto;border-radius:12px;border:1px solid var(--line);}
+  .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line);}
   table{border-collapse:collapse;width:100%;font-size:.76rem;table-layout:auto;}
   tbody td:nth-child(1), tbody td:nth-child(2){font-size:.85rem;font-weight:600;}
-  thead th{color:#fff;padding:6px 7px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600;
-    position:sticky;top:var(--thead-top,112px);z-index:25;}
+  thead th{color:#fff;padding:6px 7px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600;}
   thead th .arrow{font-size:.68rem;opacity:.85;margin-left:3px;}
-  thead tr.filters th{background:#f8fafc;padding:4px 5px;cursor:default;
-    position:sticky;top:var(--thead-filters-top,146px);z-index:24;}
+  thead tr.filters th{background:#f8fafc;padding:4px 5px;cursor:default;}
   thead tr.filters input, thead tr.filters select{
     width:100%;padding:3px 4px;border:1px solid var(--line);border-radius:5px;font-size:.7rem;color:var(--ink);background:#fff;
   }
@@ -85,11 +83,13 @@
   tbody tr:hover{background:#dbeafe;}
   tbody tr.clickable{cursor:pointer;}
 
-  /* Colonnes Nom/Prénom + ligne d'en-tête figées (volets figés façon tableur) :
-     repères toujours visibles en scrollant une classe entière sur tablette.
+  /* Colonnes Nom/Prénom figées (volet figé façon tableur) : repères toujours
+     visibles en scrollant horizontalement une classe entière sur tablette.
      Largeur réduite au maximum (voir firstWord() : patronyme composé réduit
-     au 1er mot à l'affichage) pour garder un maximum de colonnes visibles
-     sans défilement horizontal. */
+     au 1er mot à l'affichage) pour garder un maximum de colonnes visibles.
+     NB : on ne fige pas aussi la ligne d'en-tête verticalement (position:sticky
+     n'est pas fiable combiné à un défilement horizontal sur le même conteneur
+     — cela provoquait l'en-tête "flottant" au milieu du tableau). */
   thead th:nth-child(1), thead th:nth-child(2),
   tbody td:nth-child(1), tbody td:nth-child(2){
     position:sticky;max-width:84px;overflow:hidden;text-overflow:ellipsis;
@@ -712,32 +712,15 @@ function initTabs(){
       document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
       document.getElementById('panel-'+currentTab).classList.add('active');
       renderCurrentTab();
-      updateStickyOffsets();
     });
   });
   document.getElementById('panel-'+currentTab).classList.add('active');
-}
-
-// Hauteur réelle de l'en-tête (bandeau haut + onglets) et de la ligne de
-// titres du tableau, mesurées en direct : sert à caler le "figeage" de la
-// ligne d'en-tête du tableau (--thead-top / --thead-filters-top), qui change
-// selon la taille d'écran (voir le @media (max-width:700px) plus bas).
-function updateStickyOffsets(){
-  const header = document.querySelector('header');
-  const nav = document.getElementById('tabsNav');
-  if(!header || !nav) return;
-  const top = Math.round(header.getBoundingClientRect().height + nav.getBoundingClientRect().height);
-  document.documentElement.style.setProperty('--thead-top', top + 'px');
-  const labelRow = document.querySelector('.panel.active .table-wrap thead tr:not(.filters)');
-  const labelH = labelRow ? Math.round(labelRow.getBoundingClientRect().height) : 30;
-  document.documentElement.style.setProperty('--thead-filters-top', (top + labelH) + 'px');
 }
 
 function renderAll(){
   renderGeneral();
   CLASSES.forEach(c=>renderClassTab(c));
   renderStats();
-  updateStickyOffsets();
 }
 function renderCurrentTab(){
   if(currentTab==='general') renderGeneral();
@@ -1510,11 +1493,6 @@ function wireGlobalEvents(){
   document.getElementById('modalSave').addEventListener('click', saveModal);
   document.getElementById('studentOverlay').addEventListener('click', (e)=>{
     if(e.target.id==='studentOverlay') closeModal();
-  });
-  let resizeTimer = null;
-  window.addEventListener('resize', ()=>{
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(updateStickyOffsets, 150);
   });
 }
 
