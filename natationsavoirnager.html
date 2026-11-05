@@ -9,7 +9,7 @@
     --c1:#2563eb; --c2:#7c3aed; --c3:#db2777; --c4:#ea580c; --c5:#dc2626;
     --c6:#0891b2; --c7:#4f46e5; --c8:#fb923c; --c9:#e11d48; --c10:#0ea5e9;
     --bg:#f1f5f9; --panel:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
-    --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+    --ok:#16a34a; --warn:#d97706; --bad:#dc2626; --tb-fluo:#39ff14;
     --radius:14px;
     --shadow:0 4px 16px rgba(15,23,42,.08);
   }
@@ -68,12 +68,14 @@
   }
   .chip b{display:block;font-size:1.1rem;}
 
-  .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line);}
+  .table-wrap{overflow:auto;border-radius:12px;border:1px solid var(--line);}
   table{border-collapse:collapse;width:100%;font-size:.76rem;table-layout:auto;}
   tbody td:nth-child(1), tbody td:nth-child(2){font-size:.85rem;font-weight:600;}
-  thead th{color:#fff;padding:6px 7px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600;}
+  thead th{color:#fff;padding:6px 7px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600;
+    position:sticky;top:var(--thead-top,112px);z-index:25;}
   thead th .arrow{font-size:.68rem;opacity:.85;margin-left:3px;}
-  thead tr.filters th{background:#f8fafc;padding:4px 5px;cursor:default;}
+  thead tr.filters th{background:#f8fafc;padding:4px 5px;cursor:default;
+    position:sticky;top:var(--thead-filters-top,146px);z-index:24;}
   thead tr.filters input, thead tr.filters select{
     width:100%;padding:3px 4px;border:1px solid var(--line);border-radius:5px;font-size:.7rem;color:var(--ink);background:#fff;
   }
@@ -82,8 +84,26 @@
   tbody tr:nth-child(even){background:#eef1f6;}
   tbody tr:hover{background:#dbeafe;}
   tbody tr.clickable{cursor:pointer;}
+
+  /* Colonnes Nom/Prénom + ligne d'en-tête figées (volets figés façon tableur) :
+     repères toujours visibles en scrollant une classe entière sur tablette.
+     Largeur réduite au maximum (voir firstWord() : patronyme composé réduit
+     au 1er mot à l'affichage) pour garder un maximum de colonnes visibles
+     sans défilement horizontal. */
+  thead th:nth-child(1), thead th:nth-child(2),
+  tbody td:nth-child(1), tbody td:nth-child(2){
+    position:sticky;max-width:84px;overflow:hidden;text-overflow:ellipsis;
+  }
+  thead th:nth-child(1), tbody td:nth-child(1){left:0;width:84px;}
+  thead th:nth-child(2), tbody td:nth-child(2){left:84px;width:84px;box-shadow:2px 0 4px rgba(0,0,0,.08);}
+  thead th:nth-child(1), thead th:nth-child(2){z-index:32;}
+  thead tr.filters th:nth-child(1), thead tr.filters th:nth-child(2){z-index:31;}
+  tbody td:nth-child(1), tbody td:nth-child(2){z-index:10;}
+  tbody tr:nth-child(odd) td:nth-child(-n+2){background:#ffffff;}
+  tbody tr:nth-child(even) td:nth-child(-n+2){background:#eef1f6;}
+  tbody tr:hover td:nth-child(-n+2){background:#dbeafe;}
   .badge{display:inline-block;padding:2px 6px;border-radius:999px;font-size:.68rem;font-weight:700;color:#fff;white-space:nowrap;}
-  .badge.TB{background:var(--ok);}
+  .badge.TB{background:var(--tb-fluo);color:#064e18;}
   .badge.S{background:var(--c1);}
   .badge.F{background:var(--warn);}
   .badge.I{background:var(--bad);}
@@ -158,15 +178,21 @@
   .field-row-cb{padding:3px 0;border-bottom:1px solid #f1f5f9;}
   .field-row-cb > label{font-weight:700;font-size:.74rem;display:block;margin-bottom:2px;}
   .inline-row input[type="date"]{padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:.8rem;}
-  .cb-group{display:flex;gap:5px;flex-wrap:wrap;}
-  .cb-group.nowrap{flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px;}
+  /* Par défaut, les options d'une épreuve (TB/S/F/I, Oui/Non...) restent
+     toujours sur une seule ligne, en se partageant la largeur disponible
+     (plutôt que de passer à la ligne), pour rester lisible sur tablette sans
+     devoir agrandir la fenêtre. Seul le groupe .nowrap (Demi-tour, options
+     trop longues pour rétrécir) garde le défilement horizontal à la place. */
+  .cb-group{display:flex;gap:5px;flex-wrap:nowrap;}
+  .cb-group.nowrap{overflow-x:auto;padding-bottom:3px;}
   .cb-group.nowrap .cb-opt{flex:0 0 auto;}
   .cb-opt{
     display:flex;flex-direction:column;align-items:center;gap:0;
     border:2px solid var(--line);border-radius:8px;padding:3px 6px;cursor:pointer;
-    min-width:68px;text-align:center;background:#f8fafc;transition:.15s;position:relative;
+    flex:1 1 0;min-width:0;text-align:center;background:#f8fafc;transition:.15s;position:relative;
   }
-  .cb-group.wide .cb-opt{min-width:96px;padding:7px 12px;}
+  .cb-group.wide{overflow-x:auto;padding-bottom:3px;}
+  .cb-group.wide .cb-opt{flex:1 1 96px;min-width:96px;padding:7px 12px;}
   .cb-group.wide .code{font-size:.78rem;}
   .cb-opt:hover{border-color:var(--c1);}
   .cb-opt input{display:none;}
@@ -180,8 +206,8 @@
   .inline-row .inline-item > label{font-weight:700;font-size:.74rem;}
   .inline-row .niveau-item{margin-left:auto;}
   .inline-row .niveau-item span{font-size:.85rem;}
-  .cb-opt[data-val="TB"].checked{background:#dcfce7;border-color:var(--ok);}
-  .cb-opt[data-val="TB"].checked .code{color:#15803d;}
+  .cb-opt[data-val="TB"].checked{background:var(--tb-fluo);border-color:#2bd60f;box-shadow:0 0 0 2px rgba(57,255,20,.35);}
+  .cb-opt[data-val="TB"].checked .code{color:#064e18;}
   .cb-opt[data-val="S"].checked{background:#dbeafe;border-color:var(--c1);}
   .cb-opt[data-val="S"].checked .code{color:#1d4ed8;}
   .cb-opt[data-val="F"].checked{background:#ffedd5;border-color:var(--warn);}
@@ -228,7 +254,7 @@
   }
   .qcm-popup-opt:hover{border-color:var(--c1);}
   .qcm-popup-opt.checked{box-shadow:0 2px 6px rgba(0,0,0,.08);}
-  .qcm-popup-opt[data-val="TB"].checked{background:#dcfce7;border-color:var(--ok);}
+  .qcm-popup-opt[data-val="TB"].checked{background:var(--tb-fluo);border-color:#2bd60f;}
   .qcm-popup-opt[data-val="S"].checked{background:#dbeafe;border-color:var(--c1);}
   .qcm-popup-opt[data-val="F"].checked{background:#ffedd5;border-color:var(--warn);}
   .qcm-popup-opt[data-val="I"].checked{background:#fee2e2;border-color:var(--bad);}
@@ -585,6 +611,15 @@ function fmtDate(iso){
   if(parts.length===3) return parts[2]+'/'+parts[1]+'/'+parts[0];
   return iso;
 }
+// Colonne Nom compressée à l'affichage : un nom de famille composé de
+// plusieurs mots n'affiche que le premier, pour garder un maximum de
+// colonnes visibles sans défilement horizontal sur tablette (le nom complet
+// reste disponible en infobulle et sert toujours au tri/filtre).
+function firstWord(name){
+  const s = String(name||'').trim();
+  if(!s) return '';
+  return s.split(/\s+/)[0];
+}
 function isGarcon(s){
   const v = String(s.sexe||'').trim().toUpperCase();
   return v==='G' || v==='M';
@@ -677,15 +712,32 @@ function initTabs(){
       document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
       document.getElementById('panel-'+currentTab).classList.add('active');
       renderCurrentTab();
+      updateStickyOffsets();
     });
   });
   document.getElementById('panel-'+currentTab).classList.add('active');
+}
+
+// Hauteur réelle de l'en-tête (bandeau haut + onglets) et de la ligne de
+// titres du tableau, mesurées en direct : sert à caler le "figeage" de la
+// ligne d'en-tête du tableau (--thead-top / --thead-filters-top), qui change
+// selon la taille d'écran (voir le @media (max-width:700px) plus bas).
+function updateStickyOffsets(){
+  const header = document.querySelector('header');
+  const nav = document.getElementById('tabsNav');
+  if(!header || !nav) return;
+  const top = Math.round(header.getBoundingClientRect().height + nav.getBoundingClientRect().height);
+  document.documentElement.style.setProperty('--thead-top', top + 'px');
+  const labelRow = document.querySelector('.panel.active .table-wrap thead tr:not(.filters)');
+  const labelH = labelRow ? Math.round(labelRow.getBoundingClientRect().height) : 30;
+  document.documentElement.style.setProperty('--thead-filters-top', (top + labelH) + 'px');
 }
 
 function renderAll(){
   renderGeneral();
   CLASSES.forEach(c=>renderClassTab(c));
   renderStats();
+  updateStickyOffsets();
 }
 function renderCurrentTab(){
   if(currentTab==='general') renderGeneral();
@@ -732,7 +784,11 @@ function buildTable(tableId, columns, rows, opts={}){
   }).join('');
 
   const bodyRows = filtered.length ? filtered.map(row=>{
-    const cells = columns.map(col=>`<td>${col.render ? col.render(row) : (col.getValue(row) ?? '')}</td>`).join('');
+    const cells = columns.map(col=>{
+      const val = col.render ? col.render(row) : (col.getValue(row) ?? '');
+      const title = col.cellTitle ? ` title="${String(col.cellTitle(row)).replace(/"/g,'&quot;')}"` : '';
+      return `<td${title}>${val}</td>`;
+    }).join('');
     return `<tr class="${opts.rowClickable?'clickable':''}" data-id="${row.id}">${cells}</tr>`;
   }).join('') : `<tr><td colspan="${columns.length}" class="empty-state">Aucun élève ne correspond.</td></tr>`;
 
@@ -800,8 +856,8 @@ function uniqueValues(rows, key){
 function renderGeneral(){
   const panel = document.getElementById('panel-general');
   const columns = [
-    {key:'nom', label:'Nom', getValue:r=>r.nom},
-    {key:'prenom', label:'Prénom', getValue:r=>r.prenom},
+    {key:'nom', label:'Nom', getValue:r=>r.nom, render:r=>firstWord(r.nom), cellTitle:r=>r.nom},
+    {key:'prenom', label:'Prénom', getValue:r=>r.prenom, cellTitle:r=>r.prenom},
     {key:'classe', label:'Classe', getValue:r=>r.classe, filterType:'select', filterOptions:CLASSES},
     {key:'sexe', label:'Sexe', getValue:r=>r.sexe, render:r=>sexeBadge(r.sexe), filterType:'select', filterOptions:['F','G']},
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
@@ -844,8 +900,8 @@ function renderClassTab(classe){
   const st = computeStats(rows);
 
   const columns = [
-    {key:'nom', label:'Nom', getValue:r=>r.nom},
-    {key:'prenom', label:'Prénom', getValue:r=>r.prenom},
+    {key:'nom', label:'Nom', getValue:r=>r.nom, render:r=>firstWord(r.nom), cellTitle:r=>r.nom},
+    {key:'prenom', label:'Prénom', getValue:r=>r.prenom, cellTitle:r=>r.prenom},
     {key:'sexe', label:'Sexe', getValue:r=>r.sexe, render:r=>sexeBadge(r.sexe), filterType:'select', filterOptions:['F','G']},
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
     {key:'statut', label:'Statut', getValue:r=>r.statut, render:r=>statutBadge(r.statut), filterType:'select', filterOptions:uniqueValues(rows,'statut')},
@@ -1454,6 +1510,11 @@ function wireGlobalEvents(){
   document.getElementById('modalSave').addEventListener('click', saveModal);
   document.getElementById('studentOverlay').addEventListener('click', (e)=>{
     if(e.target.id==='studentOverlay') closeModal();
+  });
+  let resizeTimer = null;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(updateStickyOffsets, 150);
   });
 }
 
