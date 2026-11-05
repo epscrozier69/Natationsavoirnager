@@ -536,8 +536,10 @@ async function refreshAll(showLoading=true){
 /* ------------------------------------------------------------ UTILS --- */
 function computeNiveauSN(s){
   const vals = SN_CRITERIA.map(c=>s[c.key]).filter(v=>v);
-  if(vals.length < SN_CRITERIA.length) return '';
+  // Un seul F ou I suffit à invalider le niveau, même si toutes les épreuves
+  // n'ont pas encore été notées : pas besoin d'attendre la fin du test.
   if(vals.some(v=>v==='F'||v==='I')) return 'Non réussi';
+  if(vals.length < SN_CRITERIA.length) return '';
   const tb = vals.filter(v=>v==='TB').length;
   const sc = vals.filter(v=>v==='S').length;
   return tb > sc ? 'TB' : 'S';
