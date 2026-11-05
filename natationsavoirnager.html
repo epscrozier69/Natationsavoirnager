@@ -556,8 +556,11 @@ function computeNiveauSN(s){
 }
 function computeValidePN(s){
   const vals = PN_CRITERIA.map(c=>s[c.key]).filter(v=>v);
+  // Un seul "Non" suffit à invalider le pass, même si toutes les épreuves
+  // n'ont pas encore été notées : pas besoin d'attendre la fin du test.
+  if(vals.some(v=>v==='Non')) return 'Non';
   if(vals.length < PN_CRITERIA.length) return '';
-  return vals.every(v=>v==='Oui') ? 'Oui' : 'Non';
+  return 'Oui';
 }
 // Résultat final "Savoir nager" affiché : tient compte du statut du jour du
 // test (présent / dispensé / dispensé de natation) en plus du niveau calculé.
@@ -1158,8 +1161,8 @@ function openModal(id){
 
     <div class="test-section" id="sectionPN">
       <div class="criteria-grid">
-        ${pnRows}
         ${choiceGroup('Test réalisé', 'pn_ceinture', s.pn_ceinture, [['Avec ceinture','Avec ceinture'],['Sans ceinture','Sans ceinture']])}
+        ${pnRows}
       </div>
       ${choiceGroup('Statut', 'pn_statut', initialPnStatut, TEST_STATUT_OPTIONS)}
       <div class="inline-row">
