@@ -232,11 +232,6 @@
   .qcm-popup-opt[data-val="S"].checked{background:#dbeafe;border-color:var(--c1);}
   .qcm-popup-opt[data-val="F"].checked{background:#ffedd5;border-color:var(--warn);}
   .qcm-popup-opt[data-val="I"].checked{background:#fee2e2;border-color:var(--bad);}
-  .qcm-popup-clear{
-    display:block;width:100%;margin-top:8px;padding:6px;border:1px dashed var(--line);border-radius:7px;
-    background:transparent;color:var(--muted);font-size:.72rem;cursor:pointer;
-  }
-  .qcm-popup-clear:hover{border-color:var(--bad);color:var(--bad);}
 
   @media (max-width:700px){
     header{padding:12px 14px;}
@@ -1242,13 +1237,11 @@ function buildQcmPopupDom(){
     </div>
     <div class="qcm-popup-opts">
       ${['TB','S','F','I'].map(v=>`<button type="button" class="qcm-popup-opt" data-val="${v}"><span class="emoji">${LEVEL_EMOJI[v]||''}</span><span class="code">${v}</span></button>`).join('')}
-    </div>
-    <button type="button" class="qcm-popup-clear" id="qcmPopupClear">✕ Aucune note (annuler la saisie)</button>`;
+    </div>`;
   document.body.appendChild(div);
   div.querySelectorAll('.qcm-popup-opt').forEach(btn=>{
     btn.addEventListener('click', ()=> chooseQcmValue(btn.dataset.val));
   });
-  document.getElementById('qcmPopupClear').addEventListener('click', ()=> chooseQcmValue(''));
   document.getElementById('qcmPopupClose').addEventListener('click', closeQcmPopup);
   document.addEventListener('click', (e)=>{
     const popup = document.getElementById('qcmPopup');
@@ -1357,7 +1350,9 @@ function chooseQcmValue(value){
   const id = popup.dataset.studentId;
   const s = STUDENTS.find(x=>x.id===id);
   if(!s) return;
-  quickPersistQcm({...s, sn_qcm: value});
+  // Recliquer sur la note déjà attribuée l'efface, plutôt qu'un bouton "Annuler" à part.
+  const finalValue = s.sn_qcm === value ? '' : value;
+  quickPersistQcm({...s, sn_qcm: finalValue});
   const idx = qcmPopupOrder.indexOf(id);
   const nextId = idx >= 0 ? qcmPopupOrder[idx + 1] : null;
   if(nextId) showQcmPickerFor(nextId);
