@@ -995,6 +995,12 @@ function clearGroup(fieldName){
   group.querySelectorAll('input[type=checkbox]').forEach(input => input.checked = false);
   group.querySelectorAll('.cb-opt').forEach(lbl => lbl.classList.remove('checked'));
 }
+function setGroupValue(fieldName, value){
+  const group = document.querySelector(`#modalBody .cb-group[data-field="${fieldName}"]`);
+  if(!group) return;
+  group.querySelectorAll('input[type=checkbox]').forEach(input => { input.checked = (input.dataset.value === value); });
+  group.querySelectorAll('.cb-opt').forEach(lbl => lbl.classList.toggle('checked', lbl.querySelector('input').checked));
+}
 
 let modalTestType = 'sn';
 
@@ -1022,6 +1028,10 @@ function openModal(id){
   const hasSN = SN_CRITERIA.some(c=>s[c.key]) || s.sn_ancrage;
   const hasPN = PN_CRITERIA.some(c=>s[c.key]) || s.pn_ceinture;
   const initialType = (!hasSN && hasPN) ? 'pn' : 'sn';
+  // Statut : vide par défaut, "Présent" uniquement si au moins une épreuve a
+  // déjà été renseignée (données existantes) — jamais pré-coché à vide.
+  const initialSnStatut = s.sn_statut || (SN_CRITERIA.some(c=>s[c.key]) ? 'Présent' : '');
+  const initialPnStatut = s.pn_statut || (PN_CRITERIA.some(c=>s[c.key]) ? 'Présent' : '');
 
   document.getElementById('modalBody').innerHTML = `
     <div class="test-type-toggle">
@@ -1035,7 +1045,7 @@ function openModal(id){
         <div class="criteria-col">${snCol1}</div>
         <div class="criteria-col">${snCol2}</div>
       </div>
-      ${choiceGroup('Statut', 'sn_statut', s.sn_statut||'Présent', TEST_STATUT_OPTIONS)}
+      ${choiceGroup('Statut', 'sn_statut', initialSnStatut, TEST_STATUT_OPTIONS)}
       <div class="inline-row">
         <div class="inline-item">
           <label>Professeur</label>
@@ -1061,7 +1071,7 @@ function openModal(id){
         ${pnRows}
         ${choiceGroup('Test réalisé', 'pn_ceinture', s.pn_ceinture, [['Avec ceinture','Avec ceinture'],['Sans ceinture','Sans ceinture']])}
       </div>
-      ${choiceGroup('Statut', 'pn_statut', s.pn_statut||'Présent', TEST_STATUT_OPTIONS)}
+      ${choiceGroup('Statut', 'pn_statut', initialPnStatut, TEST_STATUT_OPTIONS)}
       <div class="inline-row">
         <div class="inline-item">
           <label>Professeur</label>
@@ -1096,6 +1106,7 @@ function openModal(id){
   };
   wireChoiceGroups((changedField)=>{
     autofillDates(s, changedField);
+    autofillStatuts(s, changedField);
     refreshResultDisplays(collectDraft(s));
   });
   document.querySelectorAll('#modalBody select[data-field], #modalBody input[type=date][data-field]').forEach(el=>{
@@ -1128,6 +1139,28 @@ function autofillDates(base, changedField){
   const pnCriteriaKeys = PN_CRITERIA.map(c=>c.key);
   if(!hasSNInput && snCriteriaKeys.includes(changedField)) clearGroup('sn_prof');
   if(!hasPNInput && pnCriteriaKeys.includes(changedField)) clearGroup('pn_prof');
+}
+
+// Statut : pas de valeur par défaut. "Présent" se coche automatiquement dès
+// qu'au moins une épreuve du test correspondant est renseignée, mais jamais
+// si le statut a déjà été choisi explicitement (ex: Dispensé). Si on décoche
+// la dernière épreuve, on efface le "Présent" auto-coché pour revenir à vide.
+// Ne réagit qu'aux changements des cases d'épreuve elles-mêmes, pas à un clic
+// sur le statut lui-même (pour ne jamais écraser un choix manuel en cours).
+function autofillStatuts(base, changedField){
+  const draft = collectDraft(base);
+  const snCriteriaKeys = SN_CRITERIA.map(c=>c.key);
+  const pnCriteriaKeys = PN_CRITERIA.map(c=>c.key);
+  const hasSNInput = SN_CRITERIA.some(c=>draft[c.key]);
+  const hasPNInput = PN_CRITERIA.some(c=>draft[c.key]);
+  if(snCriteriaKeys.includes(changedField)){
+    if(hasSNInput && !draft.sn_statut) setGroupValue('sn_statut','Présent');
+    else if(!hasSNInput && draft.sn_statut==='Présent') clearGroup('sn_statut');
+  }
+  if(pnCriteriaKeys.includes(changedField)){
+    if(hasPNInput && !draft.pn_statut) setGroupValue('pn_statut','Présent');
+    else if(!hasPNInput && draft.pn_statut==='Présent') clearGroup('pn_statut');
+  }
 }
 
 function collectDraft(base){
