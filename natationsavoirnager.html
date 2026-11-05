@@ -232,6 +232,11 @@
   .qcm-popup-opt[data-val="S"].checked{background:#dbeafe;border-color:var(--c1);}
   .qcm-popup-opt[data-val="F"].checked{background:#ffedd5;border-color:var(--warn);}
   .qcm-popup-opt[data-val="I"].checked{background:#fee2e2;border-color:var(--bad);}
+  .qcm-popup-clear{
+    display:block;width:100%;margin-top:8px;padding:6px;border:1px dashed var(--line);border-radius:7px;
+    background:transparent;color:var(--muted);font-size:.72rem;cursor:pointer;
+  }
+  .qcm-popup-clear:hover{border-color:var(--bad);color:var(--bad);}
 
   @media (max-width:700px){
     header{padding:12px 14px;}
@@ -1237,11 +1242,13 @@ function buildQcmPopupDom(){
     </div>
     <div class="qcm-popup-opts">
       ${['TB','S','F','I'].map(v=>`<button type="button" class="qcm-popup-opt" data-val="${v}"><span class="emoji">${LEVEL_EMOJI[v]||''}</span><span class="code">${v}</span></button>`).join('')}
-    </div>`;
+    </div>
+    <button type="button" class="qcm-popup-clear" id="qcmPopupClear">✕ Aucune note (annuler la saisie)</button>`;
   document.body.appendChild(div);
   div.querySelectorAll('.qcm-popup-opt').forEach(btn=>{
     btn.addEventListener('click', ()=> chooseQcmValue(btn.dataset.val));
   });
+  document.getElementById('qcmPopupClear').addEventListener('click', ()=> chooseQcmValue(''));
   document.getElementById('qcmPopupClose').addEventListener('click', closeQcmPopup);
   document.addEventListener('click', (e)=>{
     const popup = document.getElementById('qcmPopup');
@@ -1298,27 +1305,68 @@ function showQcmPickerFor(id){
     btn.classList.toggle('checked', btn.dataset.val === s.sn_qcm);
   });
   popup.classList.add('show');
-  anchor.scrollIntoView({block:'nearest', behavior:'smooth'});
+  anchor.scrollIntoView({block:'nearest', behavior:'auto'});
   positionQcmPopup(anchor);
 }
 
-async function chooseQcmValue(value){
+// Met à jour la cellule affichée sans attendre de re-rendre tout le tableau
+// (qui casserait par ailleurs la fenêtre flottante en plein milieu de la saisie).
+function updateQcmCellDisplay(id, value){
+  document.querySelectorAll(`[data-action="qcm"][data-id="${id}"]`).forEach(el=>{
+    el.innerHTML = codeBadge(value);
+  });
+}
+
+// Les onglets Général et Statistiques dépendent du QCM (via le résultat
+// Savoir nager) mais ne sont pas redessinés à chaque clic pour rester rapide ;
+// on les rattrape une seule fois, un court instant après la dernière saisie.
+let qcmIdleRefreshTimer = null;
+function scheduleQcmIdleRefresh(){
+  clearTimeout(qcmIdleRefreshTimer);
+  qcmIdleRefreshTimer = setTimeout(()=>{
+    renderGeneral();
+    renderStats();
+  }, 1200);
+}
+
+// Enregistrement local immédiat (affichage et avance à l'élève suivant sans
+// attendre le réseau) + envoi au Google Sheet en tâche de fond. Évite le délai
+// très perceptible qu'imposait l'attente d'un aller-retour réseau par clic.
+function quickPersistQcm(draft){
+  upsertLocalStudent(draft);
+  saveCache();
+  updateQcmCellDisplay(draft.id, draft.sn_qcm);
+  scheduleQcmIdleRefresh();
+  if(Date.now() < assumeOfflineUntil){
+    queueSave(draft);
+    setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi`);
+    return;
+  }
+  apiPost({action:'saveStudent', data:draft}).then(()=>{
+    assumeOfflineUntil = 0;
+    setSync('ok','Synchronisé ' + new Date().toLocaleTimeString());
+  }).catch(()=>{
+    assumeOfflineUntil = Date.now() + 20000;
+    queueSave(draft);
+    setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi (enregistré localement)`);
+  });
+}
+
+function chooseQcmValue(value){
   const popup = document.getElementById('qcmPopup');
   const id = popup.dataset.studentId;
   const s = STUDENTS.find(x=>x.id===id);
   if(!s) return;
-  const draft = {...s, sn_qcm: value};
-  await persistStudent(draft);
+  quickPersistQcm({...s, sn_qcm: value});
   const idx = qcmPopupOrder.indexOf(id);
   const nextId = idx >= 0 ? qcmPopupOrder[idx + 1] : null;
   if(nextId) showQcmPickerFor(nextId);
   else closeQcmPopup();
 }
 
-// Enregistrement d'une fiche élève complète : tente l'envoi direct au Google
-// Sheet, et retombe sur la file d'attente hors-ligne en cas d'échec réseau.
-// Partagé entre la fenêtre de saisie complète (saveModal) et la saisie rapide
-// du QCM Savoir Nager (chooseQcmValue).
+// Enregistrement d'une fiche élève complète (fenêtre de saisie du test
+// pratique) : tente l'envoi direct au Google Sheet, et retombe sur la file
+// d'attente hors-ligne en cas d'échec réseau.
 async function persistStudent(draft){
   if(Date.now() < assumeOfflineUntil){
     // Échec réseau récent : on n'attend pas un nouveau timeout, on passe direct au mode local.
