@@ -71,9 +71,17 @@
   .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line);}
   table{border-collapse:collapse;width:100%;font-size:.76rem;table-layout:auto;}
   tbody td:nth-child(1), tbody td:nth-child(2){font-size:.85rem;font-weight:600;}
-  thead th{color:#fff;padding:6px 7px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600;}
+  /* Ligne d'en-tête figée verticalement : valeurs calées en dur sur la
+     hauteur réelle du bandeau haut + des onglets (même technique que
+     nav.tabs{top:64px} ci-dessus, qui sert de référence). Volontairement pas
+     calculé en JS : un essai précédent utilisait une variable CSS mise à
+     jour en JS, peu fiable avec position:sticky sur Safari iPad (décalage
+     figé sur une valeur obsolète). */
+  thead th{color:#fff;padding:6px 7px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600;
+    position:sticky;top:120px;z-index:25;}
   thead th .arrow{font-size:.68rem;opacity:.85;margin-left:3px;}
-  thead tr.filters th{background:#f8fafc;padding:4px 5px;cursor:default;}
+  thead tr.filters th{background:#f8fafc;padding:4px 5px;cursor:default;
+    position:sticky;top:150px;z-index:24;}
   thead tr.filters input, thead tr.filters select{
     width:100%;padding:3px 4px;border:1px solid var(--line);border-radius:5px;font-size:.7rem;color:var(--ink);background:#fff;
   }
@@ -86,16 +94,15 @@
   /* Colonnes Nom/Prénom figées (volet figé façon tableur) : repères toujours
      visibles en scrollant horizontalement une classe entière sur tablette.
      Largeur réduite au maximum (voir firstWord() : patronyme composé réduit
-     au 1er mot à l'affichage) pour garder un maximum de colonnes visibles.
-     NB : on ne fige pas aussi la ligne d'en-tête verticalement (position:sticky
-     n'est pas fiable combiné à un défilement horizontal sur le même conteneur
-     — cela provoquait l'en-tête "flottant" au milieu du tableau). */
+     au 1er mot à l'affichage) pour garder un maximum de colonnes visibles. */
   thead th:nth-child(1), thead th:nth-child(2),
   tbody td:nth-child(1), tbody td:nth-child(2){
     position:sticky;max-width:84px;overflow:hidden;text-overflow:ellipsis;
   }
   thead th:nth-child(1), tbody td:nth-child(1){left:0;width:84px;}
   thead th:nth-child(2), tbody td:nth-child(2){left:84px;width:84px;box-shadow:2px 0 4px rgba(0,0,0,.08);}
+  /* Coin figé (ligne + colonne à la fois) : doit rester au-dessus des autres
+     cellules d'en-tête qui défilent horizontalement en dessous. */
   thead th:nth-child(1), thead th:nth-child(2){z-index:32;}
   thead tr.filters th:nth-child(1), thead tr.filters th:nth-child(2){z-index:31;}
   tbody td:nth-child(1), tbody td:nth-child(2){z-index:10;}
@@ -267,6 +274,8 @@
     .meta-row{grid-template-columns:1fr;}
     .criteria-grid{grid-template-columns:1fr;}
     nav.tabs{top:58px;padding:8px 10px;}
+    thead th{top:110px;}
+    thead tr.filters th{top:140px;}
     .chips{flex-wrap:wrap;}
     .chip{flex:1 1 calc(33% - 5px);min-width:80px;}
   }
