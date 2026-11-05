@@ -208,6 +208,31 @@
   hr.sep{border:none;border-top:2px dashed var(--line);margin:12px 0;}
   .modal-footer{padding:10px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;flex:0 0 auto;}
 
+  /* Saisie rapide QCM Savoir Nager : clic sur la cellule -> petite fenêtre
+     flottante TB/S/F/I, valider fait passer à l'élève suivant du tableau. */
+  .qcm-cell{cursor:pointer;}
+  .qcm-cell:hover{outline:2px solid var(--c7);outline-offset:1px;border-radius:6px;}
+  .qcm-popup{
+    display:none;position:fixed;z-index:200;background:#fff;border-radius:12px;
+    box-shadow:0 12px 32px rgba(0,0,0,.25);padding:10px;min-width:220px;border:1px solid var(--line);
+  }
+  .qcm-popup.show{display:block;}
+  .qcm-popup-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;}
+  .qcm-popup-head strong{font-size:.85rem;}
+  .qcm-popup-close{background:transparent;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);line-height:1;}
+  .qcm-popup-opts{display:flex;gap:6px;}
+  .qcm-popup-opt{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    border:2px solid var(--line);border-radius:8px;padding:7px 4px;cursor:pointer;background:#f8fafc;
+    font-weight:800;font-size:.72rem;color:var(--ink);transition:.15s;
+  }
+  .qcm-popup-opt:hover{border-color:var(--c1);}
+  .qcm-popup-opt.checked{box-shadow:0 2px 6px rgba(0,0,0,.08);}
+  .qcm-popup-opt[data-val="TB"].checked{background:#dcfce7;border-color:var(--ok);}
+  .qcm-popup-opt[data-val="S"].checked{background:#dbeafe;border-color:var(--c1);}
+  .qcm-popup-opt[data-val="F"].checked{background:#ffedd5;border-color:var(--warn);}
+  .qcm-popup-opt[data-val="I"].checked{background:#fee2e2;border-color:var(--bad);}
+
   @media (max-width:700px){
     header{padding:12px 14px;}
     header h1{font-size:1.05rem;}
@@ -341,10 +366,6 @@ const LEVEL_EMOJI = {
 };
 
 const TEST_STATUT_OPTIONS = [['Présent','Présent'],['Dispensé','Dispensé'],['Dispensé de natation','Dispensé de natation']];
-// QCM Savoir Nager : évaluation théorique saisie indépendamment du test
-// pratique (mêmes codes TB/S/F/I, mais n'entre pas dans le calcul du niveau
-// validé ni du résultat Savoir nager, qui restent basés uniquement sur le test pratique).
-const SN_QCM_OPTIONS = [['TB','TB'],['S','S'],['F','F'],['I','I']];
 
 const FIELDS = ['id','nom','prenom','classe','sexe','groupe',
   ...SN_CRITERIA.map(c=>c.key), 'sn_ancrage','sn_qcm','sn_prof','sn_date','sn_statut','sn_niveau',
@@ -746,11 +767,17 @@ function wireTable(container, tableId, columns, opts={}){
   if(opts.rowClickable){
     container.querySelectorAll('tbody tr[data-id]').forEach(tr=>{
       tr.addEventListener('click', (e)=>{
-        if(e.target.closest('button')) return;
+        if(e.target.closest('button, .qcm-cell')) return;
         openModal(tr.dataset.id);
       });
     });
   }
+  container.querySelectorAll('[data-action="qcm"]').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openQcmPicker(el.dataset.id, el, tableId);
+    });
+  });
   container.querySelectorAll('[data-action="delete"]').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
@@ -821,7 +848,7 @@ function renderClassTab(classe){
     {key:'sexe', label:'Sexe', getValue:r=>r.sexe, render:r=>sexeBadge(r.sexe), filterType:'select', filterOptions:['F','G']},
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
     {key:'statut', label:'Statut', getValue:r=>r.statut, render:r=>statutBadge(r.statut), filterType:'select', filterOptions:uniqueValues(rows,'statut')},
-    {key:'sn_qcm', label:'QCM SN', getValue:r=>r.sn_qcm, render:r=>codeBadge(r.sn_qcm), filterType:'select', filterOptions:['TB','S','F','I']},
+    {key:'sn_qcm', label:'QCM SN', getValue:r=>r.sn_qcm, render:r=>`<span class="qcm-cell" data-action="qcm" data-id="${r.id}">${codeBadge(r.sn_qcm)}</span>`, filterType:'select', filterOptions:['TB','S','F','I']},
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'sn_resultat', label:'Savoir nager', getValue:r=>snResultLabel(r), render:r=>snResultBadge(r), filterType:'select', filterOptions:['ACQUIS','NON ACQUIS','Dispensé','Dispensé de natation']},
     {key:'pn_valide', label:'Pass Naut.', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
@@ -1024,7 +1051,6 @@ function setModalTestType(type){
   document.querySelectorAll('.tt-btn').forEach(b=>b.classList.toggle('active', b.dataset.type===type));
   document.getElementById('sectionSN').classList.toggle('active', type==='sn');
   document.getElementById('sectionPN').classList.toggle('active', type==='pn');
-  document.getElementById('sectionQCM').classList.toggle('active', type==='qcm');
   document.getElementById('modalBody').scrollTop = 0;
 }
 
@@ -1043,10 +1069,7 @@ function openModal(id){
 
   const hasSN = SN_CRITERIA.some(c=>s[c.key]) || s.sn_ancrage;
   const hasPN = PN_CRITERIA.some(c=>s[c.key]) || s.pn_ceinture;
-  const hasQCM = !!s.sn_qcm;
-  let initialType = 'sn';
-  if(!hasSN && hasPN) initialType = 'pn';
-  else if(!hasSN && !hasPN && hasQCM) initialType = 'qcm';
+  const initialType = (!hasSN && hasPN) ? 'pn' : 'sn';
   // Statut : vide par défaut, "Présent" uniquement si au moins une épreuve a
   // déjà été renseignée (données existantes) — jamais pré-coché à vide.
   const initialSnStatut = s.sn_statut || (SN_CRITERIA.some(c=>s[c.key]) ? 'Présent' : '');
@@ -1056,7 +1079,6 @@ function openModal(id){
     <div class="test-type-toggle">
       <button type="button" class="tt-btn" data-type="sn">🏊 Savoir Nager</button>
       <button type="button" class="tt-btn" data-type="pn">🎽 Pass Nautique</button>
-      <button type="button" class="tt-btn" data-type="qcm">📝 QCM Savoir Nager</button>
     </div>
 
     <div class="test-section" id="sectionSN">
@@ -1107,17 +1129,6 @@ function openModal(id){
         </div>
       </div>
     </div>
-
-    <div class="test-section" id="sectionQCM">
-      <div class="note">📝 Évaluation théorique (QCM), indépendante du test pratique du savoir nager.</div>
-      ${choiceGroup('QCM Savoir Nager', 'sn_qcm', s.sn_qcm, SN_QCM_OPTIONS, {wide:true})}
-      <div class="inline-row">
-        <div class="inline-item niveau-item">
-          <label>Savoir nager (Niveau SN + QCM SN)</label>
-          <span id="snResultDisplay">${snResultBadge(s)}</span>
-        </div>
-      </div>
-    </div>
   `;
 
   document.querySelectorAll('.tt-btn').forEach(btn=>{
@@ -1128,7 +1139,6 @@ function openModal(id){
   const refreshResultDisplays = (draft)=>{
     document.getElementById('niveauSNDisplay').innerHTML = niveauBadge(computeNiveauSN(draft));
     document.getElementById('valideePNDisplay').innerHTML = ouiNonBadge(computeValidePN(draft));
-    document.getElementById('snResultDisplay').innerHTML = snResultBadge(draft);
     document.getElementById('pnResultDisplay').innerHTML = pnResultBadge(draft);
   };
   wireChoiceGroups((changedField)=>{
@@ -1207,6 +1217,138 @@ function closeModal(){
   currentEditId = null;
 }
 
+/* ------------------------------------------------ SAISIE RAPIDE QCM SN -- */
+// Clic sur la cellule "QCM SN" d'un onglet de classe : petite fenêtre
+// flottante TB/S/F/I. Valider une note enregistre directement (sans ouvrir
+// la grande fenêtre de saisie) et passe automatiquement à l'élève suivant
+// affiché dans le tableau, pour une saisie en rafale pendant la correction.
+let qcmPopupOrder = [];
+let qcmPopupDomId = null;
+
+function buildQcmPopupDom(){
+  if(document.getElementById('qcmPopup')) return;
+  const div = document.createElement('div');
+  div.id = 'qcmPopup';
+  div.className = 'qcm-popup';
+  div.innerHTML = `
+    <div class="qcm-popup-head">
+      <strong id="qcmPopupName"></strong>
+      <button type="button" class="qcm-popup-close" id="qcmPopupClose">&times;</button>
+    </div>
+    <div class="qcm-popup-opts">
+      ${['TB','S','F','I'].map(v=>`<button type="button" class="qcm-popup-opt" data-val="${v}"><span class="emoji">${LEVEL_EMOJI[v]||''}</span><span class="code">${v}</span></button>`).join('')}
+    </div>`;
+  document.body.appendChild(div);
+  div.querySelectorAll('.qcm-popup-opt').forEach(btn=>{
+    btn.addEventListener('click', ()=> chooseQcmValue(btn.dataset.val));
+  });
+  document.getElementById('qcmPopupClose').addEventListener('click', closeQcmPopup);
+  document.addEventListener('click', (e)=>{
+    const popup = document.getElementById('qcmPopup');
+    if(!popup || !popup.classList.contains('show')) return;
+    if(popup.contains(e.target)) return;
+    if(e.target.closest('.qcm-cell')) return; // le clic qui ouvre/change de cellule gère lui-même le popup
+    closeQcmPopup();
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape') closeQcmPopup();
+  });
+}
+
+function closeQcmPopup(){
+  const popup = document.getElementById('qcmPopup');
+  if(popup) popup.classList.remove('show');
+  qcmPopupOrder = [];
+  qcmPopupDomId = null;
+}
+
+function positionQcmPopup(anchorEl){
+  const popup = document.getElementById('qcmPopup');
+  const rect = anchorEl.getBoundingClientRect();
+  const popupWidth = popup.offsetWidth || 220;
+  const popupHeight = popup.offsetHeight || 110;
+  let left = rect.left;
+  if(left + popupWidth > window.innerWidth - 10) left = window.innerWidth - popupWidth - 10;
+  if(left < 10) left = 10;
+  let top = rect.bottom + 6;
+  if(top + popupHeight > window.innerHeight - 10) top = rect.top - popupHeight - 6;
+  if(top < 10) top = 10;
+  popup.style.left = left + 'px';
+  popup.style.top = top + 'px';
+}
+
+function openQcmPicker(id, anchorEl, domId){
+  buildQcmPopupDom();
+  const panel = document.getElementById('panel-' + domId);
+  if(!panel) return;
+  qcmPopupOrder = Array.from(panel.querySelectorAll('tbody tr[data-id]')).map(tr=>tr.dataset.id);
+  qcmPopupDomId = domId;
+  showQcmPickerFor(id);
+}
+
+function showQcmPickerFor(id){
+  const s = STUDENTS.find(x=>x.id===id);
+  if(!s){ closeQcmPopup(); return; }
+  const anchor = document.querySelector(`#panel-${qcmPopupDomId} [data-action="qcm"][data-id="${id}"]`);
+  if(!anchor){ closeQcmPopup(); return; }
+  const popup = document.getElementById('qcmPopup');
+  popup.dataset.studentId = id;
+  document.getElementById('qcmPopupName').textContent = `${s.nom} ${s.prenom}`;
+  popup.querySelectorAll('.qcm-popup-opt').forEach(btn=>{
+    btn.classList.toggle('checked', btn.dataset.val === s.sn_qcm);
+  });
+  popup.classList.add('show');
+  anchor.scrollIntoView({block:'nearest', behavior:'smooth'});
+  positionQcmPopup(anchor);
+}
+
+async function chooseQcmValue(value){
+  const popup = document.getElementById('qcmPopup');
+  const id = popup.dataset.studentId;
+  const s = STUDENTS.find(x=>x.id===id);
+  if(!s) return;
+  const draft = {...s, sn_qcm: value};
+  await persistStudent(draft);
+  const idx = qcmPopupOrder.indexOf(id);
+  const nextId = idx >= 0 ? qcmPopupOrder[idx + 1] : null;
+  if(nextId) showQcmPickerFor(nextId);
+  else closeQcmPopup();
+}
+
+// Enregistrement d'une fiche élève complète : tente l'envoi direct au Google
+// Sheet, et retombe sur la file d'attente hors-ligne en cas d'échec réseau.
+// Partagé entre la fenêtre de saisie complète (saveModal) et la saisie rapide
+// du QCM Savoir Nager (chooseQcmValue).
+async function persistStudent(draft){
+  if(Date.now() < assumeOfflineUntil){
+    // Échec réseau récent : on n'attend pas un nouveau timeout, on passe direct au mode local.
+    upsertLocalStudent(draft);
+    queueSave(draft);
+    saveCache();
+    renderAll();
+    setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi (enregistré localement)`);
+    return;
+  }
+  try{
+    await refreshAll(false); // récupérer les dernières données avant d'écrire (échoue silencieusement si hors ligne)
+    const res = await apiPost({action:'saveStudent', data:draft});
+    STUDENTS = res.students;
+    saveCache();
+    assumeOfflineUntil = 0;
+    setSync('ok','Synchronisé ' + new Date().toLocaleTimeString());
+    renderAll();
+  }catch(err){
+    // Hors ligne ou erreur réseau : on enregistre quand même localement,
+    // la synchronisation se fera automatiquement au retour de la connexion.
+    assumeOfflineUntil = Date.now() + 20000;
+    upsertLocalStudent(draft);
+    queueSave(draft);
+    saveCache();
+    renderAll();
+    setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi (enregistré localement)`);
+  }
+}
+
 async function saveModal(){
   const s = STUDENTS.find(x=>x.id===currentEditId);
   if(!s) return;
@@ -1218,41 +1360,9 @@ async function saveModal(){
 
   const btn = document.getElementById('modalSave');
   btn.disabled = true; btn.textContent = 'Enregistrement...';
-
-  if(Date.now() < assumeOfflineUntil){
-    // Échec réseau récent : on n'attend pas un nouveau timeout, on passe direct au mode local.
-    upsertLocalStudent(draft);
-    queueSave(draft);
-    saveCache();
-    renderAll();
-    closeModal();
-    setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi (enregistré localement)`);
-    btn.disabled = false; btn.textContent = '💾 Enregistrer';
-    return;
-  }
-
-  try{
-    await refreshAll(false); // récupérer les dernières données avant d'écrire (échoue silencieusement si hors ligne)
-    const res = await apiPost({action:'saveStudent', data:draft});
-    STUDENTS = res.students;
-    saveCache();
-    assumeOfflineUntil = 0;
-    setSync('ok','Synchronisé ' + new Date().toLocaleTimeString());
-    renderAll();
-    closeModal();
-  }catch(err){
-    // Hors ligne ou erreur réseau : on enregistre quand même localement,
-    // la synchronisation se fera automatiquement au retour de la connexion.
-    assumeOfflineUntil = Date.now() + 20000;
-    upsertLocalStudent(draft);
-    queueSave(draft);
-    saveCache();
-    renderAll();
-    closeModal();
-    setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi (enregistré localement)`);
-  }finally{
-    btn.disabled = false; btn.textContent = '💾 Enregistrer';
-  }
+  await persistStudent(draft);
+  closeModal();
+  btn.disabled = false; btn.textContent = '💾 Enregistrer';
 }
 
 async function deleteStudentPrompt(id){
