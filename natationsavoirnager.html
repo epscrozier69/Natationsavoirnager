@@ -506,9 +506,12 @@ function snResultLabel(s){
   const statut = s.sn_statut || 'Présent';
   if(statut !== 'Présent') return statut;
   const niveau = computeNiveauSN(s);
-  if(!niveau || !s.sn_ancrage) return '';
-  if(niveau === 'Non réussi' || s.sn_ancrage === 'Non') return 'NON ACQUIS';
-  return 'ACQUIS';
+  const qcm = s.sn_qcm;
+  if(!niveau || !s.sn_ancrage || !qcm) return '';
+  const niveauOk = niveau === 'TB' || niveau === 'S';
+  const qcmOk = qcm === 'TB' || qcm === 'S';
+  if(niveauOk && qcmOk && s.sn_ancrage === 'Oui') return 'ACQUIS';
+  return 'NON ACQUIS';
 }
 function snResultBadge(s){
   const label = snResultLabel(s);
@@ -1076,10 +1079,6 @@ function openModal(id){
           <label>Niveau validé</label>
           <span id="niveauSNDisplay">${niveauBadge(computeNiveauSN(s))}</span>
         </div>
-        <div class="inline-item niveau-item">
-          <label>Savoir nager</label>
-          <span id="snResultDisplay">${snResultBadge(s)}</span>
-        </div>
       </div>
     </div>
 
@@ -1112,6 +1111,12 @@ function openModal(id){
     <div class="test-section" id="sectionQCM">
       <div class="note">📝 Évaluation théorique (QCM), indépendante du test pratique du savoir nager.</div>
       ${choiceGroup('QCM Savoir Nager', 'sn_qcm', s.sn_qcm, SN_QCM_OPTIONS, {wide:true})}
+      <div class="inline-row">
+        <div class="inline-item niveau-item">
+          <label>Savoir nager (Niveau SN + QCM SN)</label>
+          <span id="snResultDisplay">${snResultBadge(s)}</span>
+        </div>
+      </div>
     </div>
   `;
 
