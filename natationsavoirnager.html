@@ -85,6 +85,8 @@
   .badge{display:inline-block;padding:2px 6px;border-radius:999px;font-size:.68rem;font-weight:700;color:#fff;white-space:nowrap;}
   .badge.TB{background:var(--ok);}
   .badge.S{background:var(--c1);}
+  .badge.F{background:var(--warn);}
+  .badge.I{background:var(--bad);}
   .badge.nonreussi{background:var(--bad);}
   .badge.Oui{background:var(--ok);}
   .badge.Non{background:var(--bad);}
@@ -339,9 +341,13 @@ const LEVEL_EMOJI = {
 };
 
 const TEST_STATUT_OPTIONS = [['Présent','Présent'],['Dispensé','Dispensé'],['Dispensé de natation','Dispensé de natation']];
+// QCM Savoir Nager : évaluation théorique saisie indépendamment du test
+// pratique (mêmes codes TB/S/F/I, mais n'entre pas dans le calcul du niveau
+// validé ni du résultat Savoir nager, qui restent basés uniquement sur le test pratique).
+const SN_QCM_OPTIONS = [['TB','TB'],['S','S'],['F','F'],['I','I']];
 
 const FIELDS = ['id','nom','prenom','classe','sexe','groupe',
-  ...SN_CRITERIA.map(c=>c.key), 'sn_ancrage','sn_prof','sn_date','sn_statut','sn_niveau',
+  ...SN_CRITERIA.map(c=>c.key), 'sn_ancrage','sn_qcm','sn_prof','sn_date','sn_statut','sn_niveau',
   ...PN_CRITERIA.map(c=>c.key), 'pn_ceinture','pn_prof','pn_date','pn_statut','pn_valide'];
 
 /* ------------------------------------------------------------ STATE --- */
@@ -597,6 +603,10 @@ function computeStats(rows){
     statuts: uniqueValues(rows,'statut').map(v => ({ label: v, ...breakdown(rows.filter(s=>s.statut===v)) })),
   };
 }
+function codeBadge(v){
+  if(!v) return '<span class="badge empty">—</span>';
+  return '<span class="badge '+v+'">'+(LEVEL_EMOJI[v]||'')+' '+v+'</span>';
+}
 function niveauBadge(v){
   if(!v) return '<span class="badge empty">— À évaluer</span>';
   if(v==='Non réussi') return '<span class="badge nonreussi">🔴 Non réussi</span>';
@@ -808,6 +818,7 @@ function renderClassTab(classe){
     {key:'sexe', label:'Sexe', getValue:r=>r.sexe, render:r=>sexeBadge(r.sexe), filterType:'select', filterOptions:['F','G']},
     {key:'groupe', label:'Groupe', getValue:r=>r.groupe, render:r=>groupeBadge(r.groupe), filterType:'select', filterOptions:['Fort','Moyen','Non nageur']},
     {key:'statut', label:'Statut', getValue:r=>r.statut, render:r=>statutBadge(r.statut), filterType:'select', filterOptions:uniqueValues(rows,'statut')},
+    {key:'sn_qcm', label:'QCM SN', getValue:r=>r.sn_qcm, render:r=>codeBadge(r.sn_qcm), filterType:'select', filterOptions:['TB','S','F','I']},
     {key:'sn_niveau', label:'Niveau SN', getValue:r=>r.sn_niveau, render:r=>niveauBadge(r.sn_niveau), filterType:'select', filterOptions:['TB','S','Non réussi']},
     {key:'sn_resultat', label:'Savoir nager', getValue:r=>snResultLabel(r), render:r=>snResultBadge(r), filterType:'select', filterOptions:['ACQUIS','NON ACQUIS','Dispensé','Dispensé de natation']},
     {key:'pn_valide', label:'Pass Naut.', getValue:r=>r.pn_valide, render:r=>ouiNonBadge(r.pn_valide), filterType:'select', filterOptions:['Oui','Non']},
@@ -932,6 +943,7 @@ function renderStats(){
 function exportExcel(rows, filename){
   const data = rows.map(r=>({
     Nom:r.nom, Prénom:r.prenom, Classe:r.classe, Sexe:r.sexe, 'Groupe':r.groupe||'', 'Statut':r.statut||'',
+    'QCM Savoir Nager':r.sn_qcm||'',
     'Niveau Savoir Nager':r.sn_niveau||'', 'Date SN':fmtDate(r.sn_date), 'Prof SN':r.sn_prof||'',
     'Statut test SN':r.sn_statut||'Présent', 'Savoir nager':snResultLabelEmoji(r)||'',
     'Pass Nautique':r.pn_valide||'', 'Date PN':fmtDate(r.pn_date), 'Prof PN':r.pn_prof||'',
@@ -1045,6 +1057,7 @@ function openModal(id){
         <div class="criteria-col">${snCol1}</div>
         <div class="criteria-col">${snCol2}</div>
       </div>
+      ${choiceGroup('QCM Savoir Nager (indépendant du test pratique)', 'sn_qcm', s.sn_qcm, SN_QCM_OPTIONS, {wide:true})}
       ${choiceGroup('Statut', 'sn_statut', initialSnStatut, TEST_STATUT_OPTIONS)}
       <div class="inline-row">
         <div class="inline-item">
