@@ -75,7 +75,8 @@
      bandeau haut + des onglets en pixels — deux essais précédents avec un
      décalage calculé en pixels, fixe ou en JS, ne collaient pas de façon
      fiable sur Safari iPad). */
-  .table-wrap{overflow:auto;max-height:65vh;border-radius:12px;border:1px solid var(--line);}
+  .table-wrap{overflow:auto;max-height:65vh;border-radius:12px;border:1px solid var(--line);
+    overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
   table{border-collapse:collapse;width:100%;font-size:.76rem;table-layout:auto;}
   tbody td:nth-child(1), tbody td:nth-child(2){font-size:.85rem;font-weight:600;}
   thead th{color:#fff;padding:6px 7px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600;
