@@ -877,6 +877,9 @@ function renderGeneral(){
       <div class="toolbar">
         <div class="left">
           <button class="btn secondary" data-action="export" id="genExport">📊 Exporter Excel</button>
+          <button class="btn ghost" id="genBackup">💾 Sauvegarder (.json)</button>
+          <button class="btn ghost" id="genRestore">♻️ Restaurer (.json)</button>
+          <input type="file" id="genRestoreInput" accept="application/json" style="display:none">
         </div>
         <button class="btn" id="genImport">➕ Importer les élèves du collège</button>
       </div>
@@ -888,6 +891,13 @@ function renderGeneral(){
     exportName: '2026-2027 résultats savoir nager.xlsx'
   });
   document.getElementById('genImport').addEventListener('click', importCollegeList);
+  document.getElementById('genBackup').addEventListener('click', backupJson);
+  document.getElementById('genRestore').addEventListener('click', ()=> document.getElementById('genRestoreInput').click());
+  document.getElementById('genRestoreInput').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(file) restoreFromJsonFile(file);
+    e.target.value = '';
+  });
 }
 
 /* ---- Class tabs ---- */
@@ -1038,6 +1048,55 @@ function exportExcel(rows, filename){
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Export');
   XLSX.writeFile(wb, filename);
+}
+
+/* --------------------------------------------- SAUVEGARDE / RESTAURATION JSON */
+// Sauvegarde locale de sécurité : toutes les données actuellement chargées,
+// sous forme de fichier .json téléchargé sur l'appareil (indépendant du
+// Google Sheet, pour pouvoir revenir en arrière en cas de problème).
+function backupJson(){
+  const payload = { exportedAt: new Date().toISOString(), students: STUDENTS };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sauvegarde_natation_' + todayISO() + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Restauration à partir d'un fichier .json précédemment sauvegardé : remplace
+// les données locales puis renvoie chaque élève au Google Sheet, pour que
+// tous les postes retrouvent le même état après synchronisation.
+async function restoreFromJsonFile(file){
+  let students;
+  try{
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    students = Array.isArray(parsed) ? parsed : parsed.students;
+    if(!Array.isArray(students)) throw new Error('Fichier invalide (liste d\'élèves introuvable)');
+  }catch(err){
+    alert('Erreur lors de la lecture du fichier : ' + err.message);
+    return;
+  }
+  if(!confirm(`Restaurer ${students.length} élève(s) depuis ce fichier ?\nLes données actuelles seront remplacées et renvoyées au Google Sheet.`)) return;
+  try{
+    setSync('loading', `Restauration de ${students.length} élève(s)...`);
+    STUDENTS = students;
+    saveCache();
+    renderAll();
+    for(const s of students){
+      await apiPost({action:'saveStudent', data:s});
+    }
+    setSync('ok', 'Synchronisé ' + new Date().toLocaleTimeString());
+    alert('Restauration terminée : ' + students.length + ' élève(s) renvoyé(s) au Google Sheet.');
+  }catch(err){
+    saveCache();
+    renderAll();
+    setSync('bad', `Hors ligne — restauration enregistrée localement, synchronisation au retour de la connexion`);
+  }
 }
 
 /* ------------------------------------------------------------- MODAL -- */
