@@ -881,7 +881,6 @@ function renderGeneral(){
           <button class="btn ghost" id="genRestore">♻️ Restaurer (.json)</button>
           <input type="file" id="genRestoreInput" accept="application/json" style="display:none">
         </div>
-        <button class="btn" id="genImport">➕ Importer les élèves du collège</button>
       </div>
       ${html}
     </div>`;
@@ -890,7 +889,6 @@ function renderGeneral(){
     exportRows: ()=>filtered,
     exportName: '2026-2027 résultats savoir nager.xlsx'
   });
-  document.getElementById('genImport').addEventListener('click', importCollegeList);
   document.getElementById('genBackup').addEventListener('click', backupJson);
   document.getElementById('genRestore').addEventListener('click', ()=> document.getElementById('genRestoreInput').click());
   document.getElementById('genRestoreInput').addEventListener('change', (e)=>{
@@ -1533,32 +1531,27 @@ async function deleteStudentPrompt(id){
   }
 }
 
+// Synchronise automatiquement la liste des élèves depuis l'onglet "Liste des
+// élèves du collège" (ajouts, mises à jour, retraits, fusions de doublons).
+// Lancé en silence à l'ouverture de l'application : plus de bouton manuel,
+// donc pas d'alerte de confirmation, juste une mise à jour de l'indicateur de synchro.
 async function importCollegeList(){
   try{
-    setSync('loading','Import en cours...');
+    setSync('loading','Mise à jour de la liste des élèves...');
     // Traitement potentiellement long côté script (parcours de tous les élèves
     // + nettoyage des classes hors 6ème) : délai plus généreux qu'un simple enregistrement.
     const res = await apiPost({action:'importFromCollege'}, 60000);
     STUDENTS = res.students;
+    assumeOfflineUntil = 0;
+    // Réapplique les éventuelles saisies hors-ligne pas encore envoyées, comme refreshAll().
+    const queue = loadPendingQueue();
+    Object.values(queue).forEach(draft => upsertLocalStudent(draft));
     saveCache();
-    setSync('ok','Synchronisé ' + new Date().toLocaleTimeString());
+    const nbPending = Object.keys(queue).length;
+    setSync(nbPending?'bad':'ok', nbPending ? `Hors ligne — ${nbPending} résultat(s) en attente d'envoi` : 'Synchronisé ' + new Date().toLocaleTimeString());
     renderAll();
-    const removedMsg = res.removed ? ` ${res.removed} élève(s) absent(s) de la liste retiré(s).` : '';
-    const mergedMsg = res.merged ? ` ${res.merged} doublon(s) fusionné(s) (élèves ayant changé de classe).` : '';
-    // Diagnostic temporaire pour localiser pourquoi la colonne Statut ne se
-    // met pas à jour chez l'utilisateur, sans avoir à ouvrir les journaux
-    // d'exécution Apps Script.
-    let diagMsg = '';
-    if(res.diag){
-      const d = res.diag;
-      diagMsg = `\n\n[Diagnostic Statut] colonne détectée dans "Liste des élèves du collège" : ${d.statutColonneSource >= 0 ? 'oui (colonne ' + String.fromCharCode(65 + d.statutColonneSource) + ')' : 'NON'}.`
-        + ` Colonne "statut" dans "Resultats" : ${d.statutColonneResultats >= 0 ? 'oui' : 'NON'}.`
-        + (d.statutExempleBrut !== null ? ` Exemple lu pour ${d.statutExempleEleve} : "${d.statutExempleBrut}".` : ' Aucune valeur non vide trouvée dans la colonne Statut source.');
-    }
-    alert(`Import terminé : ${res.added} élève(s) ajouté(s), ${res.updated} déjà inscrit(s) et mis à jour (classe/sexe/groupe/statut).${removedMsg}${mergedMsg}${diagMsg}`);
   }catch(err){
-    alert("Erreur lors de l'import : " + err.message);
-    setSync('bad','Erreur de synchro');
+    setSync('bad', pendingCount() ? `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi` : 'Hors ligne (' + err.message + ')');
   }
 }
 
@@ -1580,7 +1573,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
   wireGlobalEvents();
   renderAll();
   if(pendingCount()) setSync('bad', `Hors ligne — ${pendingCount()} résultat(s) en attente d'envoi`);
-  syncNow();
+  // Affichage rapide des résultats, puis synchronisation de la liste des élèves
+  // depuis le collège en arrière-plan (plus long, car parcourt tous les élèves).
+  syncNow().then(()=> importCollegeList());
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
